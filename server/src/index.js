@@ -4,6 +4,9 @@ import "dotenv/config";
 
 import incidentRoutes from "./routes/incident.routes.js";
 
+// Import RouteSearch routes.
+import routeSearchRoutes from "./routes/routeSearch.routes.js";
+
 const app = express();
 
 app.use(cors());
@@ -17,6 +20,9 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/incidents", incidentRoutes);
+
+// RouteSearch routes.
+app.use("/api/route-search", routeSearchRoutes);
 
 const PORT = process.env.PORT || 5001;
 
