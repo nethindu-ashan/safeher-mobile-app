@@ -1,10 +1,8 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
 
-
-const incidentRoutes = require("./routes/incident.routes");
-
+import incidentRoutes from "./routes/incident.routes.js";
 
 const app = express();
 
@@ -18,9 +16,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-
 app.use("/api/incidents", incidentRoutes);
-
 
 const PORT = process.env.PORT || 5000;
 

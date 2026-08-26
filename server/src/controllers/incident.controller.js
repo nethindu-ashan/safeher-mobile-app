@@ -1,6 +1,6 @@
-const incidentService = require("../services/incident.service");
+import * as incidentService from "../services/incident.service.js";
 
-const createIncident = async (req, res) => {
+export const createIncident = async (req, res) => {
   try {
     const incident = await incidentService.createIncident(req.body);
 
@@ -15,8 +15,4 @@ const createIncident = async (req, res) => {
       message: error.message,
     });
   }
-};
-
-module.exports = {
-  createIncident,
 };
