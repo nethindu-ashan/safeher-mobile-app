@@ -18,7 +18,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/incidents", incidentRoutes);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`SafeHer server running on port ${PORT}`);
