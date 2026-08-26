@@ -1,6 +1,6 @@
-const supabase = require("../config/supabase");
+import prisma from "../config/prisma.js";
 
-const createIncident = async (incidentData) => {
+export const createIncident = async (incidentData) => {
   const {
     category,
     location,
@@ -9,27 +9,15 @@ const createIncident = async (incidentData) => {
     isAnonymous,
   } = incidentData;
 
-  const { data, error } = await supabase
-    .from("incidents")
-    .insert([
-      {
-        category: category,
-        location: location,
-        incident_datetime: dateTime,
-        description: description,
-        is_anonymous: isAnonymous ?? true,
-      },
-    ])
-    .select()
-    .single();
+  const incident = await prisma.incident.create({
+    data: {
+      category,
+      location,
+      incidentDatetime: new Date(dateTime),
+      description,
+      isAnonymous: isAnonymous ?? true,
+    },
+  });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
-};
-
-module.exports = {
-  createIncident,
+  return incident;
 };

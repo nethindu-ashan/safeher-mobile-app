@@ -1,8 +1,6 @@
-const incidentRepository = require(
-  "../repositories/incident.repository"
-);
+import * as incidentRepository from "../repositories/incident.repository.js";
 
-const createIncident = async (incidentData) => {
+export const createIncident = async (incidentData) => {
   const {
     category,
     location,
@@ -14,12 +12,5 @@ const createIncident = async (incidentData) => {
     throw new Error("All required fields must be provided");
   }
 
-  const incident =
-    await incidentRepository.createIncident(incidentData);
-
-  return incident;
-};
-
-module.exports = {
-  createIncident,
+  return await incidentRepository.createIncident(incidentData);
 };

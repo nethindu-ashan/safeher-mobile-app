@@ -1,11 +1,8 @@
-const express = require("express");
-
-const {
-  createIncident,
-} = require("../controllers/incident.controller");
+import express from "express";
+import { createIncident } from "../controllers/incident.controller.js";
 
 const router = express.Router();
 
 router.post("/", createIncident);
 
-module.exports = router;
+export default router;
