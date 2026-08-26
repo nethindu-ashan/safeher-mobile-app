@@ -2,6 +2,10 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+
+const incidentRoutes = require("./routes/incident.routes");
+
+
 const app = express();
 
 app.use(cors());
@@ -13,6 +17,10 @@ app.get("/api/health", (req, res) => {
     message: "SafeHer API is running",
   });
 });
+
+
+app.use("/api/incidents", incidentRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 
