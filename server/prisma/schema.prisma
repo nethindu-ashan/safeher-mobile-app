@@ -18,3 +18,48 @@ model Incident {
 
   @@map("incidents")
 }
+
+// Stores safety support services such as hospitals,police stations and women's support centres
+model SupportService {
+  // Unique ID for each support service
+  id String @id @default(uuid()) @db.Uuid
+
+  // Name of the support service
+  // Example: National Hospital Colombo
+  name String @db.VarChar(150)
+
+  // Type/category of the service
+  // Example: HOSPITAL, POLICE, WOMEN_SUPPORT
+  type String @db.VarChar(50)
+
+  // Small description about the support service
+  description String?
+
+  // Physical address of the support service
+  address String @db.VarChar(255)
+
+  // Latitude used to identify the service location
+  latitude Float
+
+  // Longitude used to identify the service location
+  longitude Float
+
+  // Contact number of the service
+  phone String? @db.VarChar(30)
+
+  // Opening/available hours
+  // Example: "24 Hours"
+  openingHours String? @map("opening_hours") @db.VarChar(100)
+
+  // Shows whether the service is currently active in SafeHer
+  isAvailable Boolean @default(true) @map("is_available")
+
+  // Automatically records when this record was created
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Automatically updates whenever the record is modified
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Actual PostgreSQL table name
+  @@map("support_services")
+}
