@@ -4,6 +4,12 @@ import "dotenv/config";
 
 import incidentRoutes from "./routes/incident.routes.js";
 
+// Import RouteSearch routes.
+import routeSearchRoutes from "./routes/routeSearch.routes.js";
+
+// Handles Safety Support Services & Nearby Help APIs
+import supportRoutes from "./routes/support.routes.js";
+
 const app = express();
 
 app.use(cors());
@@ -17,6 +23,14 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/incidents", incidentRoutes);
+
+// RouteSearch routes.
+app.use("/api/route-search", routeSearchRoutes);
+
+// Support Service routes
+app.use("/api/support", supportRoutes);
+
+
 
 const PORT = process.env.PORT || 5001;
 
