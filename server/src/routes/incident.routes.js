@@ -1,8 +1,9 @@
 import express from "express";
-import { createIncident } from "../controllers/incident.controller.js";
+import { createIncident , getNearbyIncidents  } from "../controllers/incident.controller.js";
 
 const router = express.Router();
 
 router.post("/", createIncident);
+router.get("/nearby", getNearbyIncidents);
 
 export default router;

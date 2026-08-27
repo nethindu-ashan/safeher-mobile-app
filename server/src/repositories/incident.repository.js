@@ -23,3 +23,21 @@ export const createIncident = async (incidentData) => {
 
   return incident;
 };
+
+export const getNearbyIncidents = async () => {
+  const incidents = await prisma.incident.findMany({
+    orderBy: {
+      incidentDatetime: "desc",
+    },
+    select: {
+      id: true,
+      category: true,
+      location: true,
+      incidentDatetime: true,
+      createdAt: true,
+      status: true,
+    },
+  });
+
+  return incidents;
+};

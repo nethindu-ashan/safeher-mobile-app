@@ -29,3 +29,7 @@ export const createIncident = async (incidentData) => {
 
   return await incidentRepository.createIncident(incidentData);
 };
+
+export const getNearbyIncidents = async () => {
+  return await incidentRepository.getNearbyIncidents();
+};

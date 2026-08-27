@@ -16,3 +16,19 @@ export const createIncident = async (req, res) => {
     });
   }
 };
+
+export const getNearbyIncidents = async (req, res) => {
+  try {
+    const incidents = await incidentService.getNearbyIncidents();
+
+    res.status(200).json({
+      success: true,
+      data: incidents,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
