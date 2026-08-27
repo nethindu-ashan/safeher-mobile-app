@@ -6,10 +6,14 @@ datasource db {
   provider = "postgresql"
 }
 
+
+
 model Incident {
+
   id               String   @id @default(uuid()) @db.Uuid
   category         String   @db.VarChar(100)
-  location         String   @db.VarChar(255)
+  latitude         Float
+  longitude        Float
   incidentDatetime DateTime @map("incident_datetime") @db.Timestamptz(6)
   description      String
   isAnonymous      Boolean  @default(true) @map("is_anonymous")
@@ -18,6 +22,8 @@ model Incident {
 
   @@map("incidents")
 }
+
+
 
 // Stores safety support services such as hospitals,police stations and women's support centres
 model SupportService {
