@@ -53,6 +53,7 @@ const formatDistance = (distanceMeters) => {
 const formatDuration = (duration) => {
 
   // Remove the "s" from the Google value.
+  //convert string to a number by 'parseFloat'
   const seconds = parseFloat(duration.replace("s", ""));
 
   // Convert seconds into minutes.
@@ -179,10 +180,7 @@ const searchRoutes = async ( startLocation, destination ) => {
   */
   if (!response.ok) {
 
-    console.error(
-      "Google Routes API error:",
-      data
-    );
+    console.error( "Google Routes API error:", data);
 
     throw new Error(
       data.error?.message ||
