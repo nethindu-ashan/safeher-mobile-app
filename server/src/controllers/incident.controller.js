@@ -19,7 +19,11 @@ export const createIncident = async (req, res) => {
 
 export const getNearbyIncidents = async (req, res) => {
   try {
-    const incidents = await incidentService.getNearbyIncidents();
+    const { latitude, longitude } = req.query;
+    const incidents = await incidentService.getNearbyIncidents(
+      Number(latitude),
+      Number(longitude)
+    );
 
     res.status(200).json({
       success: true,

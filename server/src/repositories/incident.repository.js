@@ -24,7 +24,7 @@ export const createIncident = async (incidentData) => {
   return incident;
 };
 
-export const getNearbyIncidents = async () => {
+export const getNearbyIncidents = async (latitude, longitude) => {
   const incidents = await prisma.incident.findMany({
     orderBy: {
       incidentDatetime: "desc",
