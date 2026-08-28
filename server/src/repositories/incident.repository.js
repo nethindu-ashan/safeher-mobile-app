@@ -32,7 +32,8 @@ export const getNearbyIncidents = async () => {
     select: {
       id: true,
       category: true,
-      location: true,
+      latitude: true,
+      longitude: true,
       incidentDatetime: true,
       createdAt: true,
       status: true,
