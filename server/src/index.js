@@ -3,12 +3,9 @@ import cors from "cors";
 import "dotenv/config";
 
 import incidentRoutes from "./routes/incident.routes.js";
-
-// Import RouteSearch routes.
 import routeSearchRoutes from "./routes/routeSearch.routes.js";
-
-// Handles Safety Support Services & Nearby Help APIs
 import supportRoutes from "./routes/support.routes.js";
+import sosRoutes from "./routes/sos.routes.js";
 
 const app = express();
 
@@ -24,11 +21,11 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/incidents", incidentRoutes);
 
-// RouteSearch routes.
 app.use("/api/route-search", routeSearchRoutes);
 
-// Support Service routes
 app.use("/api/support", supportRoutes);
+
+app.use("/api/sos", sosRoutes);
 
 
 
