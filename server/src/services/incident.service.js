@@ -1,18 +1,12 @@
 import * as incidentRepository from "../repositories/incident.repository.js";
+import { validateIncident } from "../validators/incident.validator.js";
 
 export const createIncident = async (incidentData) => {
-  const {
-    category,
-    location,
-    dateTime,
-    description,
-  } = incidentData;
+  validateIncident(incidentData);
 
-  if (!category || !location || !dateTime || !description) {
-    throw new Error("All required fields must be provided");
-  }
-
-  return await incidentRepository.createIncident(incidentData);
+  return await incidentRepository.createIncident(
+    incidentData
+  );
 };
 
 export const getNearbyIncidents = async () => {

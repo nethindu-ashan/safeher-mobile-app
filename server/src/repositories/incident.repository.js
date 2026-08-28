@@ -3,7 +3,8 @@ import prisma from "../config/prisma.js";
 export const createIncident = async (incidentData) => {
   const {
     category,
-    location,
+    latitude,
+    longitude,
     dateTime,
     description,
     isAnonymous,
@@ -12,7 +13,8 @@ export const createIncident = async (incidentData) => {
   const incident = await prisma.incident.create({
     data: {
       category,
-      location,
+      latitude,
+      longitude,
       incidentDatetime: new Date(dateTime),
       description,
       isAnonymous: isAnonymous ?? true,
@@ -30,7 +32,8 @@ export const getNearbyIncidents = async () => {
     select: {
       id: true,
       category: true,
-      location: true,
+      latitude: true,
+      longitude: true,
       incidentDatetime: true,
       createdAt: true,
       status: true,
