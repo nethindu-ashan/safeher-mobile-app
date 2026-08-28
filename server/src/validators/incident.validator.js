@@ -39,3 +39,25 @@ export const validateIncident = (incidentData) => {
     throw new Error("Invalid incident date and time");
   }
 };
+
+export const validateNearbyIncidents = (latitude, longitude) => {
+  if (latitude === undefined || longitude === undefined) {
+    throw new Error("Latitude and longitude are required");
+  }
+
+  if (typeof latitude !== "number" || Number.isNaN(latitude)) {
+    throw new Error("Latitude must be a number");
+  }
+
+  if (typeof longitude !== "number" || Number.isNaN(longitude)) {
+    throw new Error("Longitude must be a number");
+  }
+
+  if (latitude < -90 || latitude > 90) {
+    throw new Error("Invalid latitude");
+  }
+
+  if (longitude < -180 || longitude > 180) {
+    throw new Error("Invalid longitude");
+  }
+};
