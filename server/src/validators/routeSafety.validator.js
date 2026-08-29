@@ -1,0 +1,170 @@
+/*
+  Route Safety Validator
+
+  Purpose:
+  Validate latitude, longitude, radius and
+  recent-day values before the request
+  reaches the controller.
+*/
+
+const validateNearbySafetyRequest = (req, res, next) => {
+
+  /*
+    Values from URL query parameters
+    arrive as strings.
+
+    Example:
+    ?latitude=6.9271
+
+    latitude will initially be "6.9271"
+  */
+  const {
+    latitude,
+    longitude,
+    radiusKm = "5",
+    days = "30",
+  } = req.query;
+
+
+  /*
+    Latitude and longitude are required.
+  */
+  if (latitude === undefined || latitude === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Latitude is required.",
+    });
+  }
+
+
+  if (longitude === undefined || longitude === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Longitude is required.",
+    });
+  }
+
+
+  /*
+    Convert query-string values
+    into JavaScript numbers.
+  */
+  const parsedLatitude = Number(latitude);
+  const parsedLongitude = Number(longitude);
+  const parsedRadiusKm = Number(radiusKm);
+  const parsedDays = Number(days);
+
+
+  /*
+    Check whether values are valid numbers.
+  */
+  if (!Number.isFinite(parsedLatitude)) {
+    return res.status(400).json({
+      success: false,
+      message: "Latitude must be a valid number.",
+    });
+  }
+
+
+  if (!Number.isFinite(parsedLongitude)) {
+    return res.status(400).json({
+      success: false,
+      message: "Longitude must be a valid number.",
+    });
+  }
+
+
+  /*
+    Valid latitude range:
+    -90 to 90
+  */
+  if (
+    parsedLatitude < -90 ||
+    parsedLatitude > 90
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Latitude must be between -90 and 90.",
+    });
+  }
+
+
+  /*
+    Valid longitude range:
+    -180 to 180
+  */
+  if (
+    parsedLongitude < -180 ||
+    parsedLongitude > 180
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Longitude must be between -180 and 180.",
+    });
+  }
+
+
+  /*
+    Radius must be a positive number.
+
+    We limit it to 50 km so a request
+    cannot accidentally search an
+    unnecessarily huge area.
+  */
+  if (
+    !Number.isFinite(parsedRadiusKm) ||
+    parsedRadiusKm <= 0 ||
+    parsedRadiusKm > 50
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Radius must be greater than 0 and not more than 50 km.",
+    });
+  }
+
+
+  /*
+    Number of days must also be valid.
+
+    Maximum 365 days is an implementation
+    safeguard for this feature.
+  */
+  if (
+    !Number.isInteger(parsedDays) ||
+    parsedDays <= 0 ||
+    parsedDays > 365
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Days must be a whole number between 1 and 365.",
+    });
+  }
+
+
+  /*
+    Store cleaned values in the request.
+
+    Controller can now use these values
+    without converting or validating again.
+  */
+  req.routeSafetyData = {
+    latitude: parsedLatitude,
+    longitude: parsedLongitude,
+    radiusKm: parsedRadiusKm,
+    days: parsedDays,
+  };
+
+
+  /*
+    Validation successful.
+    Continue to controller.
+  */
+  next();
+};
+
+
+export {
+  validateNearbySafetyRequest,
+};

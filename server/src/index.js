@@ -6,6 +6,7 @@ import incidentRoutes from "./routes/incident.routes.js";
 import routeSearchRoutes from "./routes/routeSearch.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import sosRoutes from "./routes/sos.routes.js";
+import routeSafetyRoutes from "./routes/routeSafety.routes.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/support", supportRoutes);
 
 app.use("/api/sos", sosRoutes);
 
+app.use("/api/route-safety", routeSafetyRoutes);
 
 
 const PORT = process.env.PORT || 5001;
