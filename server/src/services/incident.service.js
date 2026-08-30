@@ -73,3 +73,13 @@ export const getNearbyIncidents = async (latitude, longitude) => {
   return nearbyIncidents;
 
 };
+
+export const getIncidentById = async (id) => {
+  const incident = await incidentRepository.getIncidentById(id);
+
+  if (!incident) {
+    throw new Error("Incident not found");
+  }
+
+  return incident;
+};
