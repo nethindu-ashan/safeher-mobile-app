@@ -36,3 +36,21 @@ export const getNearbyIncidents = async (req, res) => {
     });
   }
 };
+
+export const getIncidentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const incident = await incidentService.getIncidentById(id);
+
+    res.status(200).json({
+      success: true,
+      data: incident,
+    });
+  } catch (error) {
+    res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

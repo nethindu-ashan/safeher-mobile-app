@@ -42,3 +42,13 @@ export const getNearbyIncidents = async (latitude, longitude) => {
 
   return incidents;
 };
+
+export const getIncidentById = async (id) => {
+  const incident = await prisma.incident.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return incident;
+};
