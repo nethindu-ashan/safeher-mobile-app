@@ -78,10 +78,7 @@ const validateNearbySafetyRequest = (req, res, next) => {
     Valid latitude range:
     -90 to 90
   */
-  if (
-    parsedLatitude < -90 ||
-    parsedLatitude > 90
-  ) {
+  if (parsedLatitude < -90 || parsedLatitude > 90) {
     return res.status(400).json({
       success: false,
       message: "Latitude must be between -90 and 90.",
@@ -93,10 +90,7 @@ const validateNearbySafetyRequest = (req, res, next) => {
     Valid longitude range:
     -180 to 180
   */
-  if (
-    parsedLongitude < -180 ||
-    parsedLongitude > 180
-  ) {
+  if (parsedLongitude < -180 || parsedLongitude > 180) {
     return res.status(400).json({
       success: false,
       message: "Longitude must be between -180 and 180.",
@@ -164,7 +158,98 @@ const validateNearbySafetyRequest = (req, res, next) => {
   next();
 };
 
+/*
+  Validate safety-information request
+  for a selected route.
+*/
+const validateRouteIncidentRequest = (
+  req,
+  res,
+  next
+) => {
+
+  const {
+    encodedPolyline,
+    corridorKm = 0.5,
+    days = 30,
+  } = req.body;
+
+
+  /*
+    Route polyline is required.
+  */
+  if (
+    typeof encodedPolyline !== "string" ||
+    encodedPolyline.trim() === ""
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message:
+        "Encoded route polyline is required.",
+    });
+  }
+
+
+  const parsedCorridorKm =
+    Number(corridorKm);
+
+  const parsedDays =
+    Number(days);
+
+
+  /*
+    Safety corridor validation.
+
+    0.1 km = 100 metres
+    Maximum = 5 km
+  */
+  if (
+    !Number.isFinite(parsedCorridorKm) ||
+    parsedCorridorKm < 0.1 ||
+    parsedCorridorKm > 5
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message:
+        "Corridor must be between 0.1 and 5 km.",
+    });
+  }
+
+
+  if (
+    !Number.isInteger(parsedDays) ||
+    parsedDays <= 0 ||
+    parsedDays > 365
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message:
+        "Days must be a whole number between 1 and 365.",
+    });
+  }
+
+
+  req.routeIncidentData = {
+
+    encodedPolyline:
+      encodedPolyline.trim(),
+
+    corridorKm:
+      parsedCorridorKm,
+
+    days:
+      parsedDays,
+  };
+
+
+  next();
+};
+
 
 export {
   validateNearbySafetyRequest,
+  validateRouteIncidentRequest,
 };
