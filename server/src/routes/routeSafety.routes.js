@@ -1,12 +1,7 @@
 import express from "express";
 
-import {
-  getSafetyIncidents,
-} from "../controllers/routeSafety.controller.js";
-
-import {
-  validateNearbySafetyRequest,
-} from "../validators/routeSafety.validator.js";
+import {getSafetyIncidents, getRouteSafetyIncidents, } from "../controllers/routeSafety.controller.js";
+import {validateNearbySafetyRequest,   validateRouteIncidentRequest, } from "../validators/routeSafety.validator.js";
 
 
 const router = express.Router();
@@ -23,6 +18,11 @@ const router = express.Router();
   &days=30
 */
 router.get("/incidents", validateNearbySafetyRequest, getSafetyIncidents);
+/*
+  Safety information for
+  one selected route.
+*/
+router.post("/route-incidents", validateRouteIncidentRequest, getRouteSafetyIncidents);
 
 
 export default router;
