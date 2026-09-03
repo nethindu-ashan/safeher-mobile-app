@@ -1,23 +1,16 @@
 import { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
-
-import { COLORS, RADIUS, SPACING } from "../constants/theme";
+import { View } from "react-native";
 
 type Props = {
   children: ReactNode;
 };
 
-export default function AppCard({ children }: Props) {
-  return <View style={styles.card}>{children}</View>;
+export default function AppCard({
+  children,
+}: Props) {
+  return (
+    <View className="mb-4 rounded-2xl border border-app-border bg-white p-4">
+      {children}
+    </View>
+  );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
-});

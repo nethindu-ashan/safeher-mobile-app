@@ -1,5 +1,10 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { COLORS, SPACING } from "../constants/theme";
+import {
+  ActivityIndicator,
+  Text,
+  View,
+} from "react-native";
+
+import { COLORS } from "../constants/theme";
 
 export default function LoadingState({
   message = "Loading...",
@@ -7,22 +12,15 @@ export default function LoadingState({
   message?: string;
 }) {
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
-      <Text style={styles.text}>{message}</Text>
+    <View className="items-center justify-center p-6">
+      <ActivityIndicator
+        size="large"
+        color={COLORS.primary}
+      />
+
+      <Text className="mt-2 text-app-muted">
+        {message}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.lg,
-  },
-
-  text: {
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-  },
-});

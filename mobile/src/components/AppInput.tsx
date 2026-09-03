@@ -1,49 +1,31 @@
 import {
-  StyleSheet,
   Text,
   TextInput,
   TextInputProps,
   View,
 } from "react-native";
 
-import { COLORS, RADIUS, SPACING } from "../constants/theme";
-
 type Props = TextInputProps & {
   label?: string;
 };
 
-export default function AppInput({ label, ...props }: Props) {
+export default function AppInput({
+  label,
+  ...props
+}: Props) {
   return (
-    <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+    <View className="mb-4">
+      {label && (
+        <Text className="mb-2 text-sm font-medium text-app-text">
+          {label}
+        </Text>
+      )}
 
       <TextInput
-        style={styles.input}
-        placeholderTextColor={COLORS.textSecondary}
+        className="rounded-xl border border-app-border bg-white px-4 py-3 text-app-text"
+        placeholderTextColor="#8A8192"
         {...props}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.md,
-  },
-
-  label: {
-    color: COLORS.text,
-    fontWeight: "500",
-    marginBottom: SPACING.sm,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: COLORS.background,
-    color: COLORS.text,
-  },
-});

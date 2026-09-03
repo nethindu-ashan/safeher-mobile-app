@@ -1,54 +1,40 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-
-import { COLORS, SPACING } from "../constants/theme";
-
-type Props = {
-  title: string;
-  showBack?: boolean;
-};
+import {
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 
 export default function ScreenHeader({
   title,
   showBack = true,
-}: Props) {
+}: {
+  title: string;
+  showBack?: boolean;
+}) {
   return (
-    <View style={styles.container}>
+    <View className="flex-row items-center justify-between py-4">
       {showBack ? (
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹</Text>
+        <Pressable
+          onPress={() => router.back()}
+          className="h-10 w-10 items-center justify-center rounded-full bg-gray-50"
+        >
+          <Ionicons
+            name="chevron-back-outline"
+            size={20}
+            color="#251B2D"
+          />
         </Pressable>
       ) : (
-        <View style={styles.placeholder} />
+        <View className="h-10 w-10" />
       )}
 
-      <Text style={styles.title}>{title}</Text>
+      <Text className="text-base font-semibold text-app-text">
+        {title}
+      </Text>
 
-      <View style={styles.placeholder} />
+      <View className="h-10 w-10" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: SPACING.md,
-  },
-
-  back: {
-    fontSize: 32,
-    color: COLORS.text,
-  },
-
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-
-  placeholder: {
-    width: 30,
-  },
-});

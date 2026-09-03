@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import {
   Text,
   View,
@@ -5,9 +6,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import EmptyState from "../../src/components/EmptyState";
+import PrimaryButton from "../../src/components/PrimaryButton";
 import { COLORS } from "../../src/constants/theme";
 
-export default function AlertsScreen() {
+export default function ReportsScreen() {
   return (
     <SafeAreaView
       style={{
@@ -17,15 +19,22 @@ export default function AlertsScreen() {
     >
       <View className="flex-1 px-5 pt-4">
         <Text className="text-2xl font-bold text-app-text">
-          Safety Alerts
+          Reports
         </Text>
 
         <Text className="mt-1 text-app-muted">
-          Community safety information near you
+          Your incident reports
         </Text>
 
         <View className="flex-1 justify-center">
-          <EmptyState message="No safety alerts loaded yet." />
+          <EmptyState message="No reports loaded yet." />
+        </View>
+
+        <View className="pb-5">
+          <PrimaryButton
+            title="Report an Incident"
+            onPress={() => router.push("/report")}
+          />
         </View>
       </View>
     </SafeAreaView>

@@ -1,6 +1,10 @@
-import { Pressable, StyleSheet, Text } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { GRADIENTS, RADIUS } from "../constants/theme";
+import {
+  Pressable,
+  Text,
+} from "react-native";
+
+import { GRADIENTS } from "../constants/theme";
 
 type Props = {
   title: string;
@@ -17,46 +21,23 @@ export default function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.wrapper,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
+      className={`overflow-hidden rounded-full ${
+        disabled ? "opacity-50" : "active:opacity-80"
+      }`}
     >
       <LinearGradient
         colors={GRADIENTS.primary}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.button}
+        style={{
+          paddingVertical: 15,
+          alignItems: "center",
+        }}
       >
-        <Text style={styles.text}>{title}</Text>
+        <Text className="font-semibold text-white">
+          {title}
+        </Text>
       </LinearGradient>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    borderRadius: RADIUS.full,
-    overflow: "hidden",
-  },
-
-  button: {
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-
-  text: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  pressed: {
-    opacity: 0.85,
-  },
-
-  disabled: {
-    opacity: 0.5,
-  },
-});

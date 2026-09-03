@@ -1,5 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
-import { COLORS, SPACING } from "../constants/theme";
+import { Text, View } from "react-native";
 
 export default function ErrorState({
   message = "Something went wrong.",
@@ -7,19 +6,10 @@ export default function ErrorState({
   message?: string;
 }) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>{message}</Text>
+    <View className="p-4">
+      <Text className="text-center text-danger">
+        {message}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.md,
-  },
-
-  text: {
-    color: COLORS.error,
-    textAlign: "center",
-  },
-});

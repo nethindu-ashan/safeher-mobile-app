@@ -1,41 +1,24 @@
 export const COLORS = {
-  primary: "#7C3AED",
-  primaryDark: "#5B21B6",
+  primary: "#8B3DFF",
+  primaryDark: "#6D28D9",
 
-  pink: "#EC4899",
-  pinkLight: "#FDF2F8",
+  pink: "#FF5C8A",
+  pinkDark: "#EC4899",
 
-  purpleLight: "#F5F3FF",
-
-  background: "#FFFFFF",
+  background: "#FFFBFD",
   surface: "#FFFFFF",
 
-  text: "#1F2937",
-  textSecondary: "#6B7280",
+  text: "#251B2D",
+  textSecondary: "#8A8192",
 
-  border: "#E5E7EB",
+  border: "#EEE8F1",
 
-  success: "#16A34A",
+  success: "#22C55E",
+
   error: "#EF4444",
-
   sos: "#FF4D5A",
 };
 
 export const GRADIENTS = {
   primary: ["#FF5C8A", "#8B3DFF"] as const,
-};
-
-export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-};
-
-export const RADIUS = {
-  sm: 8,
-  md: 12,
-  lg: 18,
-  full: 999,
 };
