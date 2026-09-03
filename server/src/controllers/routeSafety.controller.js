@@ -1,6 +1,4 @@
-import {
-  getNearbySafetyIncidents,
-} from "../services/routeSafety.service.js";
+import {getNearbySafetyIncidents, getIncidentsNearRoute,} from "../services/routeSafety.service.js";
 
 
 /*
@@ -91,15 +89,87 @@ const getSafetyIncidents = async (req, res) => {
       If database/service fails,
       return server error.
     */
+    console.error("Route safety error:", error );
+    return res.status(500).json({
+      success: false,
+      message: "Unable to retrieve safety incidents.",
+    });
+  }
+};
+
+/*
+  Get incidents associated with
+  one selected route.
+*/
+const getRouteSafetyIncidents = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const {
+      encodedPolyline,
+      corridorKm,
+      days,
+    } = req.routeIncidentData;
+
+
+    const result =
+      await getIncidentsNearRoute({
+        encodedPolyline,
+        corridorKm,
+        days,
+      });
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        "Route safety information retrieved successfully.",
+
+      data: {
+
+        corridorKm,
+
+        days,
+
+        routePointCount:
+          result.routePointCount,
+
+        incidentCount:
+          result.incidents.length,
+
+        incidents:
+          result.incidents,
+
+
+        /*
+          Important SafeHer requirement:
+          community information does not
+          guarantee that a route is safe.
+        */
+        disclaimer:
+          "Safety information is based on recent community reports and does not guarantee that a route is completely safe.",
+      },
+    });
+
+  } catch (error) {
+
     console.error(
-      "Route safety error:",
+      "Route safety information error:",
       error
     );
 
+
     return res.status(500).json({
+
       success: false,
+
       message:
-        "Unable to retrieve safety incidents.",
+        "Unable to retrieve route safety information.",
     });
   }
 };
@@ -107,4 +177,5 @@ const getSafetyIncidents = async (req, res) => {
 
 export {
   getSafetyIncidents,
+  getRouteSafetyIncidents,
 };
