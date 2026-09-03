@@ -1,13 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function HomeScreen() {
+export default function ReportScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SafeHer</Text>
-
-      <Text style={styles.subtitle}>
-        Together for Safer Journeys
-      </Text>
+      <Text style={styles.title}>Report Incident</Text>
     </View>
   );
 }
@@ -21,14 +17,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: "700",
-    color: "#7C3AED",
-  },
-
-  subtitle: {
-    fontSize: 15,
-    marginTop: 8,
-    color: "#6B7280",
   },
 });

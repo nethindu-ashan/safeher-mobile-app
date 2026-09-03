@@ -1,33 +1,99 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+const PURPLE = "#7C3AED";
+const GRAY = "#9CA3AF";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+
+        tabBarActiveTintColor: PURPLE,
+        tabBarInactiveTintColor: GRAY,
+
+        tabBarStyle: {
+          height: 68,
+          paddingTop: 6,
+          paddingBottom: 8,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#E5E7EB",
+        },
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="home-outline"
+              color={color}
+              size={size}
+            />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="explore"
+        name="report"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Report",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="document-text-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="route"
+        options={{
+          title: "Route",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="map-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: "Alerts",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="notifications-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: "Help",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="medical-outline"
+              color={color}
+              size={size}
+            />
+          ),
         }}
       />
     </Tabs>
