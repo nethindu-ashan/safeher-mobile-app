@@ -1,4 +1,4 @@
-import {getNearbySafetyIncidents, getIncidentsNearRoute,} from "../services/routeSafety.service.js";
+import {getNearbySafetyIncidents, getIncidentsNearRoute, compareRouteSafety,} from "../services/routeSafety.service.js";
 
 
 /*
@@ -49,46 +49,26 @@ const getSafetyIncidents = async (req, res) => {
     return res.status(200).json({
 
       success: true,
-
-      message:
-        "Nearby safety incidents retrieved successfully.",
-
+      message: "Nearby safety incidents retrieved successfully.",
       data: {
 
-        /*
-          Location used as the center
-          of the safety search.
-        */
+        // Location used as the center of the safety search.
         center: {
           latitude,
           longitude,
         },
 
-        /*
-          Search settings.
-        */
+        //  Search settings.
         radiusKm,
         days,
-
-        /*
-          Number of incidents found.
-        */
-        incidentCount:
-          incidents.length,
-
-        /*
-          Actual incidents.
-        */
-        incidents,
+        incidentCount: incidents.length, // Number of incidents found.
+        incidents, // Actual incidents
       },
     });
 
   } catch (error) {
 
-    /*
-      If database/service fails,
-      return server error.
-    */
+    // If database/service fails, return server error.
     console.error("Route safety error:", error );
     return res.status(500).json({
       success: false,
@@ -97,79 +77,72 @@ const getSafetyIncidents = async (req, res) => {
   }
 };
 
-/*
-  Get incidents associated with
-  one selected route.
-*/
-const getRouteSafetyIncidents = async (
-  req,
-  res
-) => {
+// Get incidents associated with one selected route.
+const getRouteSafetyIncidents = async (req, res) => {
 
   try {
-
-    const {
-      encodedPolyline,
-      corridorKm,
-      days,
-    } = req.routeIncidentData;
-
-
-    const result =
-      await getIncidentsNearRoute({
-        encodedPolyline,
-        corridorKm,
-        days,
-      });
-
+    const {encodedPolyline, corridorKm, days,} = req.routeIncidentData;
+    const result = await getIncidentsNearRoute({encodedPolyline, corridorKm, days,});
 
     return res.status(200).json({
-
       success: true,
-
-      message:
-        "Route safety information retrieved successfully.",
-
+      message: "Route safety information retrieved successfully.",
       data: {
-
         corridorKm,
-
         days,
+        routePointCount: result.routePointCount,
+        incidentCount: result.incidents.length,
+        incidents: result.incidents,
 
-        routePointCount:
-          result.routePointCount,
-
-        incidentCount:
-          result.incidents.length,
-
-        incidents:
-          result.incidents,
-
-
-        /*
-          Important SafeHer requirement:
-          community information does not
-          guarantee that a route is safe.
-        */
-        disclaimer:
-          "Safety information is based on recent community reports and does not guarantee that a route is completely safe.",
+        // Important SafeHer requirement: community information does not guarantee that a route is safe.
+        disclaimer: "Safety information is based on recent community reports and does not guarantee that a route is completely safe.",
       },
     });
 
   } catch (error) {
 
-    console.error(
-      "Route safety information error:",
-      error
-    );
-
+    console.error("Route safety information error:", error);
 
     return res.status(500).json({
-
       success: false,
+      message: "Unable to retrieve route safety information.",
+    });
+  }
+};
 
-      message:
-        "Unable to retrieve route safety information.",
+
+// Compare safety information between multiple route options.
+const compareRoutes = async (req, res) => {
+
+  try {
+
+    // Data was already validated by validateRouteComparisonRequest()
+    const {routes, corridorKm, days,} = req.routeComparisonData;
+
+    /*
+      This will:
+      - check each route
+      - find incidents near each route
+      - create comparison information
+    */
+    const comparison = await compareRouteSafety({routes, corridorKm, days,});
+
+    return res.status(200).json({
+      success: true,
+      message: "Route comparison completed successfully.",
+      data: comparison,
+    
+      // Important SafeHer requirement: community information does not guarantee that a route is safe.
+      disclaimer: "Route comparison is based on recent community reports and does not guarantee that any route is completely safe.",
+    });
+
+  } catch (error) {
+
+    console.error("Route comparison error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to compare route safety information.",
     });
   }
 };
@@ -178,4 +151,5 @@ const getRouteSafetyIncidents = async (
 export {
   getSafetyIncidents,
   getRouteSafetyIncidents,
+  compareRoutes,
 };
