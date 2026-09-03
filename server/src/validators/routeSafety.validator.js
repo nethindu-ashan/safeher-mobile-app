@@ -150,24 +150,13 @@ const validateNearbySafetyRequest = (req, res, next) => {
     days: parsedDays,
   };
 
-
-  /*
-    Validation successful.
-    Continue to controller.
-  */
+  // Validation successful.
+  // Continue to controller.
   next();
 };
 
-/*
-  Validate safety-information request
-  for a selected route.
-*/
-const validateRouteIncidentRequest = (
-  req,
-  res,
-  next
-) => {
-
+// Validate safety-information request for a selected route.
+const validateRouteIncidentRequest = (req, res, next) => {
   const {
     encodedPolyline,
     corridorKm = 0.5,
@@ -175,28 +164,17 @@ const validateRouteIncidentRequest = (
   } = req.body;
 
 
-  /*
-    Route polyline is required.
-  */
-  if (
-    typeof encodedPolyline !== "string" ||
-    encodedPolyline.trim() === ""
-  ) {
+  // Route polyline is required.
+  if (typeof encodedPolyline !== "string" || encodedPolyline.trim() === "") {
 
     return res.status(400).json({
       success: false,
-      message:
-        "Encoded route polyline is required.",
+      message: "Encoded route polyline is required.",
     });
   }
 
-
-  const parsedCorridorKm =
-    Number(corridorKm);
-
-  const parsedDays =
-    Number(days);
-
+  const parsedCorridorKm = Number(corridorKm);
+  const parsedDays = Number(days);
 
   /*
     Safety corridor validation.
@@ -212,8 +190,7 @@ const validateRouteIncidentRequest = (
 
     return res.status(400).json({
       success: false,
-      message:
-        "Corridor must be between 0.1 and 5 km.",
+      message: "Corridor must be between 0.1 and 5 km.",
     });
   }
 
@@ -226,30 +203,122 @@ const validateRouteIncidentRequest = (
 
     return res.status(400).json({
       success: false,
-      message:
-        "Days must be a whole number between 1 and 365.",
+      message: "Days must be a whole number between 1 and 365.",
     });
   }
 
-
   req.routeIncidentData = {
-
-    encodedPolyline:
-      encodedPolyline.trim(),
-
-    corridorKm:
-      parsedCorridorKm,
-
-    days:
-      parsedDays,
+    encodedPolyline: encodedPolyline.trim(),
+    corridorKm: parsedCorridorKm,
+    days: parsedDays,
   };
-
 
   next();
 };
 
+// Validate multiple routes before comparing their safety information.
+const validateRouteComparisonRequest = (req, res, next) => {
+
+  const {routes, corridorKm = 0.5, days = 30,} = req.body;
+
+  /*
+    Routes must be an array.
+
+    At least two routes are needed because this feature is for comparison.
+  */
+  if (!Array.isArray(routes) || routes.length < 2) {
+
+    return res.status(400).json({
+      success: false,
+      message: "At least two routes are required for comparison.",
+    });
+  }
+
+
+  /*
+    Limit the number of routes.
+
+    Google normally returns only a
+    small number of route alternatives,
+    so we do not need a huge array.
+  */
+  if (routes.length > 5) {
+
+    return res.status(400).json({
+      success: false,
+      message:"A maximum of 5 routes can be compared.",
+    });
+  }
+
+
+  // Validate every route.
+  for (const route of routes) {
+
+    // Every route should have an ID.
+    if (typeof route.id !== "string" || route.id.trim() === "") {
+
+      return res.status(400).json({
+        success: false,
+        message: "Each route must have a valid ID.",
+      });
+    }
+
+    /*
+      Every route needs its Google encoded polyline.
+      Without it we cannot calculate incidents near the route.
+    */
+    if (typeof route.encodedPolyline !== "string" || route.encodedPolyline.trim() === "") {
+
+      return res.status(400).json({
+        success: false,
+        message: `Encoded polyline is required for ${route.id}.`,
+      });
+    }
+  }
+
+
+  //  Convert comparison settings to numbers.
+  const parsedCorridorKm = Number(corridorKm);
+  const parsedDays =  Number(days);
+
+  // Validate route safety corridor.
+  if (
+    !Number.isFinite(parsedCorridorKm) ||
+    parsedCorridorKm < 0.1 ||
+    parsedCorridorKm > 5
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message: "Corridor must be between 0.1 and 5 km.",
+    });
+  }
+
+  // Validate recent-day period.
+  if (
+    !Number.isInteger(parsedDays) ||
+    parsedDays <= 0 ||
+    parsedDays > 365
+  ) {
+
+    return res.status(400).json({
+      success: false,
+      message: "Days must be a whole number between 1 and 365.",
+    });
+  }
+
+  // Store clean data for controller.
+  req.routeComparisonData = {
+    routes,
+    corridorKm: parsedCorridorKm,
+    days:  parsedDays,
+  };
+
+  next();
+};
 
 export {
   validateNearbySafetyRequest,
   validateRouteIncidentRequest,
+  validateRouteComparisonRequest,
 };
