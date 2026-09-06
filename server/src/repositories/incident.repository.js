@@ -35,6 +35,7 @@ export const getNearbyIncidents = async (latitude, longitude) => {
       latitude: true,
       longitude: true,
       incidentDatetime: true,
+      description: true,
       createdAt: true,
       status: true,
     },
