@@ -299,10 +299,7 @@ const getNearbySafetyIncidents = async ({
     between the requested location
     and every candidate incident.
   */
-  const nearbyIncidents =
-    candidateIncidents
-      .map((incident) => {
-
+  const nearbyIncidents = candidateIncidents.map((incident) => {
         const distanceKm =
           calculateDistanceKm(
             latitude,
@@ -352,35 +349,26 @@ const getNearbySafetyIncidents = async ({
   return nearbyIncidents;
 };
 
-/*
-  Get recent safety incidents located
-  close to a selected route.
-*/
+
+
+//Get recent safety incidents located close to a selected route.
 const getIncidentsNearRoute = async ({
   encodedPolyline,
   corridorKm = 0.5,
   days = 30,
 }) => {
 
-  /*
-    Convert Google encoded polyline
-    into route coordinates.
-  */
-  const routePoints =
-    decodePolyline(encodedPolyline);
-
+ //Convert Google encoded polyline into route coordinates.
+  const routePoints = decodePolyline(encodedPolyline);
 
   if (routePoints.length < 2) {
-
     throw new Error(
       "Unable to decode route polyline."
     );
   }
 
 
-  /*
-    Get all route latitudes and longitudes.
-  */
+  //Get all route latitudes and longitudes.
   const latitudes =
     routePoints.map(
       (point) => point.latitude
@@ -392,92 +380,40 @@ const getIncidentsNearRoute = async ({
     );
 
 
-  /*
-    Find route boundaries.
-  */
-  const routeMinLatitude =
-    Math.min(...latitudes);
 
-  const routeMaxLatitude =
-    Math.max(...latitudes);
-
-  const routeMinLongitude =
-    Math.min(...longitudes);
-
-  const routeMaxLongitude =
-    Math.max(...longitudes);
+  //Find route boundaries.
+  const routeMinLatitude = Math.min(...latitudes);
+  const routeMaxLatitude = Math.max(...latitudes);
+  const routeMinLongitude = Math.min(...longitudes);
+  const routeMaxLongitude = Math.max(...longitudes);
 
 
-  /*
-    Find average route latitude.
 
-    This helps calculate longitude
-    padding more accurately.
-  */
-  const averageLatitude =
-    latitudes.reduce(
-      (total, value) => total + value,
-      0
-    ) / latitudes.length;
+  //Find average route latitude.
+  // This helps calculate longitude padding more accurately.
+  const averageLatitude = latitudes.reduce((total, value) => 
+     total + value, 0) / latitudes.length;
 
+  //Convert corridor distance into approximate latitude/longitude padding.
+  const latitudePadding = corridorKm / 111.32;
+  const longitudeScale = Math.max(Math.cos(averageLatitude * Math.PI / 180), 0.01);
+  const longitudePadding = corridorKm / (111.32 * longitudeScale);
 
-  /*
-    Convert corridor distance into
-    approximate latitude/longitude padding.
-  */
-  const latitudePadding =
-    corridorKm / 111.32;
+  // Create a larger rectangle around the route.
+  const minLatitude = routeMinLatitude - latitudePadding;
+  const maxLatitude = routeMaxLatitude + latitudePadding;
+  const minLongitude = routeMinLongitude - longitudePadding;
+  const maxLongitude = routeMaxLongitude + longitudePadding;
 
-
-  const longitudeScale =
-    Math.max(
-      Math.cos(
-        averageLatitude *
-        Math.PI /
-        180
-      ),
-      0.01
-    );
-
-
-  const longitudePadding =
-    corridorKm /
-    (111.32 * longitudeScale);
-
-
-  /*
-    Create a larger rectangle
-    around the route.
-  */
-  const minLatitude =
-    routeMinLatitude - latitudePadding;
-
-  const maxLatitude =
-    routeMaxLatitude + latitudePadding;
-
-  const minLongitude =
-    routeMinLongitude - longitudePadding;
-
-  const maxLongitude =
-    routeMaxLongitude + longitudePadding;
-
-
-  /*
-    Only consider recent incidents.
-  */
+  // Only consider recent incidents.
   const sinceDate = new Date();
 
   sinceDate.setDate(
     sinceDate.getDate() - days
   );
 
-
-  /*
-    First get candidate incidents
-    using our existing repository.
-  */
-  const candidateIncidents =
-    await findIncidentsInBounds({
+  // First get candidate incidents using our existing repository.
+  const candidateIncidents = await findIncidentsInBounds({
       minLatitude,
       maxLatitude,
       minLongitude,
@@ -485,32 +421,18 @@ const getIncidentsNearRoute = async ({
       sinceDate,
     });
 
+  // Calculate actual distance between every incident and the route.
+  const routeIncidents = candidateIncidents.map((incident) => {
 
-  /*
-    Calculate actual distance between
-    every incident and the route.
-  */
-  const routeIncidents =
-    candidateIncidents
-
-      .map((incident) => {
-
-        const distanceToRouteKm =
-          calculateDistanceToRoute(
+        const distanceToRouteKm = calculateDistanceToRoute(
             incident.latitude,
             incident.longitude,
             routePoints
           );
 
-
         return {
-
-          id:
-            incident.id,
-
-          category:
-            incident.category,
-
+          id: incident.id,
+          category: incident.category,
 
           /*
             Approximate coordinates.
@@ -518,60 +440,150 @@ const getIncidentsNearRoute = async ({
             We don't return the full exact
             reporting location to the map.
           */
-          latitude:
-            Number(
-              incident.latitude.toFixed(3)
-            ),
-
-          longitude:
-            Number(
-              incident.longitude.toFixed(3)
-            ),
-
-          incidentDatetime:
-            incident.incidentDatetime,
-
-          description:
-            incident.description,
-
-          status:
-            incident.status,
-
-          distanceToRouteKm:
-            Number(
-              distanceToRouteKm.toFixed(2)
-            ),
+          latitude: Number(incident.latitude.toFixed(3)),
+          longitude: Number(incident.longitude.toFixed(3)),
+          incidentDatetime: incident.incidentDatetime,
+          description: incident.description,
+          status: incident.status,
+          distanceToRouteKm: Number(distanceToRouteKm.toFixed(2)),
         };
       })
 
+      // Only incidents inside our safety corridor are returned.
+      .filter((incident) => incident.distanceToRouteKm <= corridorKm)
 
-      /*
-        Only incidents inside our
-        safety corridor are returned.
-      */
-      .filter(
-        (incident) =>
-          incident.distanceToRouteKm
-            <= corridorKm
-      )
-
-
-      /*
-        Nearest route incidents first.
-      */
-      .sort(
-        (a, b) =>
-          a.distanceToRouteKm -
-          b.distanceToRouteKm
-      );
+      // Nearest route incidents first.
+      .sort((a, b) => a.distanceToRouteKm - b.distanceToRouteKm);
 
 
   return {
-    routePointCount:
-      routePoints.length,
+    routePointCount: routePoints.length,
+    incidents: routeIncidents,
+  };
+};
 
-    incidents:
-      routeIncidents,
+
+/*
+  Compare safety information for multiple route options.
+
+  Each route is checked using the existing Sprint 2 route-safety logic.
+*/
+const compareRouteSafety = async ({
+  routes,
+  corridorKm = 0.5,
+  days = 30,
+}) => {
+
+  const comparedRoutes = [];
+
+
+ // Check each route one by one.
+  for (const route of routes) {
+
+    /*
+      Reuse our Sprint 2 function.
+      This finds recent incidents located close to this route.
+    */
+    const safetyResult = await getIncidentsNearRoute({
+        encodedPolyline: route.encodedPolyline,
+        corridorKm,
+        days,
+      });
+
+
+    const incidents = safetyResult.incidents;
+
+    /*
+      Count incidents by category.
+
+      Example:
+      {
+        Harassment: 2,
+        "Suspicious Activity": 1
+      }
+    */
+    const categorySummary = incidents.reduce((summary, incident) => {
+
+          const category = incident.category;
+
+          summary[category] =  (summary[category] || 0) + 1;
+
+          return summary;
+        },
+        {}
+      );
+
+
+    /*
+      Find the nearest reported incident to this route.
+      Incidents were already sorted nearest → farthest in Sprint 2.
+    */
+    const nearestIncidentDistanceKm =
+      incidents.length > 0
+        ? incidents[0].distanceToRouteKm
+        : null;
+
+    //  Add travel information +  community safety information into one route object.
+    comparedRoutes.push({
+      id: route.id,
+      name: route.name || route.id,
+
+      // Travel information originally returned by Google Routes API.
+      distanceMeters: route.distanceMeters ?? null,
+      distance: route.distance ?? null,
+      durationSeconds: route.durationSeconds ?? null,
+      duration: route.duration ?? null,
+      routeLabels: route.routeLabels || [],
+
+      // Keep polyline because frontend can use it to draw/select route.
+      encodedPolyline: route.encodedPolyline,
+
+      // Community safety information.
+      incidentCount: incidents.length,
+      nearestIncidentDistanceKm,
+      categorySummary,
+      incidents,
+    });
+  }
+
+
+  /*
+    Find the smallest number of recent incident reports among the routes.
+    This does NOT mean the route is guaranteed to be safe.
+  */
+  const minimumIncidentCount =
+    Math.min(
+      ...comparedRoutes.map(
+        (route) => route.incidentCount
+      )
+    );
+
+
+  /*
+    Add a simple comparison label.
+
+    We deliberately say
+    "Fewer recent reports",
+    not "Safest Route".
+  */
+  const routesWithComparison = comparedRoutes.map((route) => {
+
+      return {
+
+        ...route,
+        comparisonLabel: route.incidentCount === minimumIncidentCount
+            ? "Fewer recent reports"
+            : "More recent reports",
+      };
+    });
+
+
+  return {
+
+    routeCount: routesWithComparison.length,
+    corridorKm,
+    days,
+    routes:  routesWithComparison,
   };
 };
 
@@ -579,5 +591,6 @@ const getIncidentsNearRoute = async ({
 export {
   getNearbySafetyIncidents,
   getIncidentsNearRoute,
+  compareRouteSafety,
 
 };
