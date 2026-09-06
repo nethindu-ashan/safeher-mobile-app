@@ -21,6 +21,8 @@ export async function getNearbyIncidents(
   );
 }
 
+export async function getIncidentById(id: string) {
+  return await apiRequest(`/api/incidents/${id}`);
 // Nethindu - Create new incident
 export async function createIncident(
   payload: CreateIncidentPayload
