@@ -8,3 +8,7 @@ export async function getNearbyIncidents(
     `/api/incidents/nearby?latitude=${latitude}&longitude=${longitude}`
   );
 }
+
+export async function getIncidentById(id: string) {
+  return await apiRequest(`/api/incidents/${id}`);
+}
