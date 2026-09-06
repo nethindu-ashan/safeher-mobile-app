@@ -5,7 +5,8 @@ import type {
   CreateIncidentResponse,
 } from "../types/incident";
 
-// Pasindu - Get nearby incidents
+
+
 export async function getNearbyIncidents(
   latitude: number,
   longitude: number
@@ -21,9 +22,24 @@ export async function getNearbyIncidents(
   );
 }
 
-export async function getIncidentById(id: string) {
-  return await apiRequest(`/api/incidents/${id}`);
-// Nethindu - Create new incident
+
+
+export async function getIncidentById(
+  id: string
+) {
+  if (typeof apiRequest !== "function") {
+    throw new Error(
+      `getIncidentById: apiRequest is ${typeof apiRequest}`
+    );
+  }
+
+  return apiRequest(
+    `/api/incidents/${id}`
+  );
+}
+
+
+
 export async function createIncident(
   payload: CreateIncidentPayload
 ): Promise<CreateIncidentResponse> {
@@ -33,8 +49,11 @@ export async function createIncident(
     );
   }
 
-  return apiRequest("/api/incidents", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return apiRequest(
+    "/api/incidents",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }

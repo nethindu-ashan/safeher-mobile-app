@@ -11,6 +11,7 @@ import {
 import MapView, {
   MapPressEvent,
   Marker,
+  PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
 
@@ -27,14 +28,12 @@ import {
   COLORS,
 } from "../../src/constants/theme";
 
-
 const DEFAULT_REGION: Region = {
   latitude: 6.9271,
   longitude: 79.8612,
   latitudeDelta: 0.02,
   longitudeDelta: 0.02,
 };
-
 
 export default function SelectLocationScreen() {
   const {
@@ -59,16 +58,13 @@ export default function SelectLocationScreen() {
         : null
     );
 
-
   useEffect(() => {
     const loadCurrentLocation = async () => {
       try {
-        // Ask permission to use device location
+        // Ask permission to access current location
         const { status } =
           await Location.requestForegroundPermissionsAsync();
 
-        // If permission is denied,
-        // user can still manually select a point on the map
         if (status !== "granted") {
           Alert.alert(
             "Location Permission",
@@ -89,7 +85,7 @@ export default function SelectLocationScreen() {
           longitude: location.coords.longitude,
         };
 
-        // Move the map to the user's current location
+        // Move map to current location
         setRegion({
           latitude: coordinates.latitude,
           longitude: coordinates.longitude,
@@ -97,8 +93,8 @@ export default function SelectLocationScreen() {
           longitudeDelta: 0.01,
         });
 
-        // Only automatically select current location
-        // if user has not already selected another location
+        // Automatically select current location only
+        // if user has not selected a location before
         if (
           draft.latitude === null ||
           draft.longitude === null
@@ -121,8 +117,7 @@ export default function SelectLocationScreen() {
     loadCurrentLocation();
   }, [draft.latitude, draft.longitude]);
 
-
-  // Runs when user taps somewhere on the map
+  // Runs when user taps on the map
   const handleMapPress = (
     event: MapPressEvent
   ) => {
@@ -135,8 +130,7 @@ export default function SelectLocationScreen() {
     });
   };
 
-
-  // Save selected coordinates into the shared report context
+  // Save the selected location in IncidentReportContext
   const handleConfirm = () => {
     if (!selectedLocation) {
       Alert.alert(
@@ -152,10 +146,9 @@ export default function SelectLocationScreen() {
       longitude: selectedLocation.longitude,
     });
 
-    // Return to report form
+    // Return to Report Incident screen
     router.back();
   };
-
 
   return (
     <SafeAreaView
@@ -172,10 +165,10 @@ export default function SelectLocationScreen() {
           incident happened.
         </Text>
 
-
-        {/* Map */}
+        {/* Google Map */}
         <View className="flex-1 overflow-hidden rounded-2xl border border-app-border">
           <MapView
+            provider={PROVIDER_GOOGLE}
             style={{
               flex: 1,
             }}
@@ -188,10 +181,8 @@ export default function SelectLocationScreen() {
             {selectedLocation && (
               <Marker
                 coordinate={{
-                  latitude:
-                    selectedLocation.latitude,
-                  longitude:
-                    selectedLocation.longitude,
+                  latitude: selectedLocation.latitude,
+                  longitude: selectedLocation.longitude,
                 }}
                 pinColor={COLORS.pink}
                 title="Incident Location"
@@ -201,8 +192,7 @@ export default function SelectLocationScreen() {
           </MapView>
         </View>
 
-
-        {/* Selected coordinates */}
+        {/* Selected location details */}
         {selectedLocation && (
           <View className="mt-4 rounded-2xl bg-light-purple p-4">
             <Text className="font-semibold text-primary">
@@ -225,7 +215,6 @@ export default function SelectLocationScreen() {
             </Text>
           </View>
         )}
-
 
         {/* Confirm button */}
         <View className="pb-5 pt-4">
