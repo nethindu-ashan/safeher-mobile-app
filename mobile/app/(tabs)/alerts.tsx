@@ -120,7 +120,7 @@ export default function AlertsScreen() {
                 key={incident.id}
                 incident={incident}
                 onPress={() => {
-                  console.log("Selected incident:", incident.id);
+                  router.push(`/alerts/${incident.id}`);
                 }}
               />
             ))}
