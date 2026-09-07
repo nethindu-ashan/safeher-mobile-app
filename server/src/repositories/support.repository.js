@@ -1,18 +1,15 @@
-// Import the shared Prisma client
-// This is used to communicate with the PostgreSQL database
+// Shared Prisma client used by the SafeHer backend.
 import prisma from "../config/prisma.js";
 
 /**
- * Get all available support services from the database
+ * Get all active SafeHer-managed support services.
  */
 export const getAllSupportServices = async () => {
-  return await prisma.supportService.findMany({
-    // Only return services that are active/available
+  return prisma.supportService.findMany({
     where: {
       isAvailable: true,
     },
 
-    // Sort services by name
     orderBy: {
       name: "asc",
     },
@@ -20,14 +17,14 @@ export const getAllSupportServices = async () => {
 };
 
 /**
- * Get a single support service using its ID
+ * Get one SafeHer-managed support service by UUID.
  *
- * @param {string} id - UUID of the support service
+ * @param {string} id
  */
 export const getSupportServiceById = async (id) => {
-  return await prisma.supportService.findUnique({
+  return prisma.supportService.findUnique({
     where: {
-      id: id,
+      id,
     },
   });
 };

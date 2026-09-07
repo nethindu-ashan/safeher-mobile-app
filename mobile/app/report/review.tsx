@@ -44,13 +44,12 @@ export default function ReviewReportScreen() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    console.log(
-      "createIncident type:",
-      typeof createIncident
-    );
+  const locationAvailable =
+    draft.latitude !== null &&
+    draft.longitude !== null;
 
-    // Check location
+  const handleSubmit = async () => {
+    // Validate location
     if (
       draft.latitude === null ||
       draft.longitude === null
@@ -63,7 +62,7 @@ export default function ReviewReportScreen() {
       return;
     }
 
-    // Check category
+    // Validate category
     if (!draft.category) {
       Alert.alert(
         "Category Required",
@@ -73,7 +72,7 @@ export default function ReviewReportScreen() {
       return;
     }
 
-    // Check description
+    // Validate description
     if (!draft.description?.trim()) {
       Alert.alert(
         "Description Required",
@@ -87,9 +86,16 @@ export default function ReviewReportScreen() {
       setLoading(true);
       setError(null);
 
-      // Create payload for backend
+      // Diagnostic check
+      if (typeof createIncident !== "function") {
+        throw new Error(
+          `createIncident is ${typeof createIncident}`
+        );
+      }
+
       const payload = {
-        category: draft.category,
+        category:
+          draft.category,
 
         description:
           draft.description.trim(),
@@ -112,16 +118,21 @@ export default function ReviewReportScreen() {
         payload
       );
 
-      // Send report to backend
       const response =
         await createIncident(payload);
 
       console.log(
-        "Incident API response:",
+        "Incident response:",
         response
       );
 
-      // Go to success screen
+      if (!response) {
+        throw new Error(
+          "createIncident returned no response"
+        );
+      }
+
+      // Move to success screen
       router.replace({
         pathname: "/report/success",
 
@@ -144,7 +155,7 @@ export default function ReviewReportScreen() {
       const message =
         err instanceof Error
           ? err.message
-          : "Unable to submit report.";
+          : String(err);
 
       setError(message);
 
@@ -156,10 +167,6 @@ export default function ReviewReportScreen() {
       setLoading(false);
     }
   };
-
-  const locationAvailable =
-    draft.latitude !== null &&
-    draft.longitude !== null;
 
   return (
     <SafeAreaView
@@ -181,7 +188,7 @@ export default function ReviewReportScreen() {
           Please verify the details before submitting.
         </Text>
 
-        {/* Report Details */}
+        {/* Report details */}
         <AppCard>
           <Text className="text-xs font-medium uppercase text-app-muted">
             Incident Type
@@ -222,7 +229,7 @@ export default function ReviewReportScreen() {
           </Text>
         </AppCard>
 
-        {/* Location Preview */}
+        {/* Location preview */}
         {locationAvailable && (
           <View className="mb-5 overflow-hidden rounded-2xl border border-app-border bg-white">
             <MapView
@@ -278,14 +285,14 @@ export default function ReviewReportScreen() {
           </View>
         )}
 
-        {/* Error Message */}
+        {/* Error message */}
         {error && (
           <ErrorState
             message={error}
           />
         )}
 
-        {/* Submit */}
+        {/* Submit button */}
         <PrimaryButton
           title={
             loading
@@ -296,7 +303,7 @@ export default function ReviewReportScreen() {
           onPress={handleSubmit}
         />
 
-        {/* Edit */}
+        {/* Edit report */}
         <Text
           onPress={() => router.back()}
           className="mt-5 text-center font-medium text-app-muted"

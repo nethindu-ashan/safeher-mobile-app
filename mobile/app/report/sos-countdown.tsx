@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import * as Location from "expo-location";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -15,53 +16,32 @@ import {
   View,
 } from "react-native";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  activateSOS,
-} from "../../src/services/sosService";
+import { activateSOS } from "../../src/services/sosService";
 
-import {
-  COLORS,
-} from "../../src/constants/theme";
+import { COLORS } from "../../src/constants/theme";
 
 export default function SOSCountdownScreen() {
-  const [countdown, setCountdown] =
-    useState(3);
+  const [countdown, setCountdown] = useState(3);
 
-  const [activating, setActivating] =
-    useState(false);
+  const [activating, setActivating] = useState(false);
 
-  const activationStarted =
-    useRef(false);
+  // Prevents the SOS API from being called more than once
+  const activationStarted = useRef(false);
 
-  useEffect(() => {
-    if (countdown <= 0) {
-      if (!activationStarted.current) {
-        activationStarted.current = true;
-
-        activateEmergencySOS();
-      }
-
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setCountdown((current) => current - 1);
-    }, 1000);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [countdown]);
-
-  const activateEmergencySOS = async () => {
+  /*
+   * Activate Emergency SOS
+   * 1. Ask for location permission
+   * 2. Get current GPS location
+   * 3. Send SOS data to backend
+   * 4. Navigate to active SOS screen
+   */
+  const activateEmergencySOS = useCallback(async () => {
     try {
       setActivating(true);
 
-      // Ask for current-location permission
+      // Ask user for location permission
       const { status } =
         await Location.requestForegroundPermissionsAsync();
 
@@ -72,35 +52,37 @@ export default function SOSCountdownScreen() {
         );
 
         router.back();
-
         return;
       }
 
-      // Get current GPS position
+      // Get current phone location
       const location =
         await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
 
+      // Data sent to backend
       const payload = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-
-        message:
-          "I need emergency assistance.",
+        message: "I need emergency assistance.",
       };
 
-      // Send SOS to backend
-      const response =
-        await activateSOS(payload);
+      console.log("Activating SOS:", payload);
 
+      // POST /api/sos
+      const response = await activateSOS(payload);
+
+      console.log("SOS response:", response);
+
+      // Make sure backend returned an SOS ID
       if (!response?.data?.id) {
         throw new Error(
           "SOS was created but no SOS ID was returned."
         );
       }
 
-      // Replace countdown screen with active screen
+      // Go to SOS Active screen
       router.replace({
         pathname: "/report/sos-active",
 
@@ -116,8 +98,7 @@ export default function SOSCountdownScreen() {
           ),
 
           status:
-            response.data.status ??
-            "ACTIVE",
+            response.data.status ?? "ACTIVE",
         },
       });
     } catch (error) {
@@ -137,7 +118,6 @@ export default function SOSCountdownScreen() {
         [
           {
             text: "OK",
-
             onPress: () => {
               router.back();
             },
@@ -147,8 +127,35 @@ export default function SOSCountdownScreen() {
     } finally {
       setActivating(false);
     }
-  };
+  }, []);
 
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      if (!activationStarted.current) {
+        activationStarted.current = true;
+
+        activateEmergencySOS();
+      }
+
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(
+        (current) => current - 1
+      );
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [
+    countdown,
+    activateEmergencySOS,
+  ]);
+
+  // Cancel before the SOS becomes active
   const cancelCountdown = () => {
     router.back();
   };
@@ -177,18 +184,21 @@ export default function SOSCountdownScreen() {
             : "SOS will activate in"}
         </Text>
 
+        {/* Countdown */}
         {!activating && (
           <Text className="mt-8 text-8xl font-bold text-white">
             {countdown}
           </Text>
         )}
 
+        {/* Loading message */}
         {activating && (
           <Text className="mt-8 text-lg font-semibold text-white">
             Getting your location...
           </Text>
         )}
 
+        {/* Cancel before activation */}
         {!activating && (
           <Pressable
             onPress={cancelCountdown}

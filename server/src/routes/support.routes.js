@@ -1,56 +1,66 @@
-// Import Express to create routes
 import express from "express";
 
-// Import support controller functions
-// These functions handle the HTTP requests and responses
 import {
   getAllSupportServices,
   getSupportServiceById,
   getNearbySupportServices,
+  getGooglePlaceDetails,
 } from "../controllers/support.controller.js";
 
-// Create a new Express router
+import {
+  validateNearbySupportQuery,
+  validatePlaceDetailsRequest,
+  validateSupportServiceId,
+} from "../validators/support.validator.js";
+
 const router = express.Router();
 
-/**
- * GET /api/support
- *
- * Get all available support services
- *
- * Example:
- * GET http://localhost:5000/api/support
- */
-router.get("/", getAllSupportServices);
 
-/**
- * GET /api/support/nearby
- *
- * Find real-world nearby services using
- * the user's current latitude and longitude.
- *
- * Example:
- * /api/support/nearby?lat=6.9271&lng=79.8612
- *
- * Optional filters:
- * &type=HOSPITAL
- * &radius=5000
- */
-router.get("/nearby", getNearbySupportServices);
+// ============================================================
+// SAFEHER DATABASE SERVICES
+// ============================================================
+
+// GET /api/support
+router.get(
+  "/",
+  getAllSupportServices
+);
 
 
-/**
- * GET /api/support/:id
- *
- * Get one support service using its ID
- *
- * Example:
- * GET http://localhost:5000/api/support/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
- */
+// ============================================================
+// REAL-WORLD NEARBY SERVICES
+// ============================================================
+
+// GET /api/support/nearby?lat=&lng=&type=&radius=
+router.get(
+  "/nearby",
+  validateNearbySupportQuery,
+  getNearbySupportServices
+);
 
 
-router.get("/:id", getSupportServiceById);
+// ============================================================
+// GOOGLE PLACE DETAILS
+// ============================================================
 
-// Export the router so we can register it
-// inside the main Express application
+// GET /api/support/place/:placeId?lat=&lng=
+router.get(
+  "/place/:placeId",
+  validatePlaceDetailsRequest,
+  getGooglePlaceDetails
+);
+
+
+// ============================================================
+// DATABASE SERVICE DETAILS
+// ============================================================
+
+// This dynamic route MUST remain last.
+router.get(
+  "/:id",
+  validateSupportServiceId,
+  getSupportServiceById
+);
+
 
 export default router;
