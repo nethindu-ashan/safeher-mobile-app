@@ -162,7 +162,7 @@ export default function AlertDetailsScreen() {
                /> 
 
               <View className="mt-5 rounded-2xl border border-app-border bg-white px-4 py-4">
-                <Text className="text-sm leading-5 text-app-muted">
+                <Text className="text-base leading-6 text-app-text">
                   {incident.description || "Community safety information has been reported in this area."}
                 </Text>
                 <View className="mt-3 flex-row items-center">
