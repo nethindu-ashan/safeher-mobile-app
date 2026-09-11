@@ -4,7 +4,9 @@ import { apiRequest } from "./apiClient";
  * Data sent to the backend when searching for routes.
  */
 export type RouteSearchRequest = {
-  startLocation: string;
+  startLocation?: string;
+  startLatitude?: number;
+  startLongitude?: number;
   destination: string;
 };
 

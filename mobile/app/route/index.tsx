@@ -31,6 +31,8 @@ import { decodePolyline } from "../../src/utils/decodePolyline";
 import { router } from "expo-router";
 import { useRouteContext } from "../../src/context/RouteContext";
 
+import * as Location from "expo-location";
+
 export default function RouteScreen() {
 
   const { setSelectedRoute } = useRouteContext();
@@ -49,53 +51,98 @@ export default function RouteScreen() {
   // Stores the routes returned by the backend.
   const [routes, setRoutes] = useState<RouteOption[]>([]);
 
+  const [currentLocation, setCurrentLocation] =
+  useState<Location.LocationObject | null>(null);
 
-  /*
-   * Handles the Search Routes button.
-   */
-  const handleSearchRoutes = async () => {
-    const start = startLocation.trim();
-    const destinationValue = destination.trim();
+  // Controls the state of getting the user's current location.
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-    // Check whether both locations were entered.
-    if (!start || !destinationValue) {
+
+  const handleUseCurrentLocation = async () => {
+  try {
+    setErrorMessage("");
+
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
       setErrorMessage(
-        "Please enter both your starting location and destination."
+        "Location permission is required to use your current location."
       );
-      setRoutes([]);
       return;
     }
 
-    // Clear previous errors and routes.
-    setErrorMessage("");
-    setRoutes([]);
+    const location =
+      await Location.getCurrentPositionAsync({});
 
-    try {
-      // Start loading.
-      setIsLoading(true);
+    setCurrentLocation(location);
 
-      /*
-       * Call the backend through route.service.ts.
-       */
-      const response = await searchRoutes({
-        startLocation: start,
-        destination: destinationValue,
-      });
+    setStartLocation("Current Location");
 
-      /*
-       * Extract the routes array from the backend response.
-       */
-      setRoutes(response.data.routes);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to search for routes."
-      );
-    } finally {
-      // Stop loading.
-      setIsLoading(false);
-    }
+  } catch (error) {
+    setErrorMessage(
+      "Unable to get your current location."
+    );
+  }
+};
+
+    /*
+    * Handles the Search Routes button.
+    */
+    const handleSearchRoutes = async () => {
+      const start = startLocation.trim();
+      const destinationValue = destination.trim();
+
+      // Check whether both locations were entered.
+      if (!start || !destinationValue) {
+        setErrorMessage(
+          "Please enter both your starting location and destination."
+        );
+        setRoutes([]);
+        return;
+      }
+
+      // Clear previous errors and routes.
+      setErrorMessage("");
+      setRoutes([]);
+
+      try {
+        // Start loading.
+        setIsLoading(true);
+
+        /*
+        * Call the backend through route.service.ts.
+        */
+        const response = await searchRoutes({
+          ...(currentLocation
+            ? {
+                startLatitude:
+                  currentLocation.coords.latitude,
+                startLongitude:
+                  currentLocation.coords.longitude,
+              }
+            : {
+                startLocation: start,
+              }),
+          destination: destination ,
+        });
+
+        setRoutes(response.data.routes);
+
+        /*
+        * Extract the routes array from the backend response.
+        */
+        setRoutes(response.data.routes);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to search for routes."
+        );
+      } finally {
+        // Stop loading.
+        setIsLoading(false);
+      }
   };
 
   /*
@@ -148,9 +195,24 @@ const handleSelectRoute = (route: RouteOption) => {
               label="Starting Location"
               placeholder="Enter starting location"
               value={startLocation}
-              onChangeText={setStartLocation}
+              onChangeText={(text) => {
+                setStartLocation(text);
+                setCurrentLocation(null);
+              }}
               autoCapitalize="words"
             />
+
+            <Pressable
+              onPress={handleUseCurrentLocation}
+              disabled={isGettingLocation}
+              className="mb-4 rounded-xl border border-primary bg-white py-3 active:opacity-70"
+            >
+              <Text className="text-center font-semibold text-primary">
+                {isGettingLocation
+                  ? "Getting Location..."
+                  : "📍 Use Current Location"}
+              </Text>
+            </Pressable>
 
             <AppInput
               label="Destination"
