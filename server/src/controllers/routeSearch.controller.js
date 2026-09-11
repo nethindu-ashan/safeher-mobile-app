@@ -7,7 +7,9 @@
   and return the result to the client.
 */
 
-import {searchRoutes,} from "../services/routeSearch.service.js";
+import {
+  searchRoutes,
+} from "../services/routeSearch.service.js";
 
 
 const searchRoute = async (req, res) => {
@@ -18,13 +20,23 @@ const searchRoute = async (req, res) => {
       The validator already checked and cleaned
       these values.
     */
-    const {startLocation, destination,} = req.routeSearchData;
+    const {
+      startLocation,
+      startLatitude,
+      startLongitude,
+      destination,
+    } = req.routeSearchData;
 
 
     /*
       Ask the service to find route options.
     */
-    const routes = await searchRoutes(startLocation, destination);
+    const routes = await searchRoutes(
+      startLocation,
+      startLatitude,
+      startLongitude,
+      destination
+    );
 
 
     /*
@@ -35,7 +47,9 @@ const searchRoute = async (req, res) => {
       message: "Available routes retrieved successfully.",
 
       data: {
-        startLocation,
+        startLocation:
+          startLocation || "Current Location",
+
         destination,
         routeCount: routes.length,
         routes,
@@ -44,17 +58,11 @@ const searchRoute = async (req, res) => {
 
   } catch (error) {
 
-    /*
-      Print the real error in the backend terminal.
+    console.error(
+      "Route search error:",
+      error
+    );
 
-      This helps us while debugging.
-    */
-    console.error("Route search error:", error);
-
-
-    /*
-      Send a safe error message to the client.
-    */
     return res.status(500).json({
       success: false,
       message: "Unable to search routes.",

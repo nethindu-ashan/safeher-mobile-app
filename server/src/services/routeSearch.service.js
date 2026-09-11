@@ -66,13 +66,19 @@ const formatDuration = (duration) => {
 /*
   Main Route Search function.
 */
-const searchRoutes = async ( startLocation, destination ) => {
+const searchRoutes = async (
+  startLocation,
+  startLatitude,
+  startLongitude,
+  destination
+) => {
 
   /*
-    Read our Google API key
+    Read Google API key
     from the .env file.
   */
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey =
+    process.env.GOOGLE_MAPS_API_KEY;
 
 
   /*
@@ -86,10 +92,41 @@ const searchRoutes = async ( startLocation, destination ) => {
 
 
   /*
-    Send request to Google Routes API.
+    Build the Google Routes API origin.
 
-    Node 22 already supports fetch(),
-    so we do not need axios.
+    If GPS coordinates are available,
+    use the exact device location.
+
+    Otherwise use the typed address.
+  */
+  let origin;
+
+  if (
+    startLatitude !== null &&
+    startLatitude !== undefined &&
+    startLongitude !== null &&
+    startLongitude !== undefined
+  ) {
+
+    origin = {
+      location: {
+        latLng: {
+          latitude: startLatitude,
+          longitude: startLongitude,
+        },
+      },
+    };
+
+  } else {
+
+    origin = {
+      address: startLocation,
+    };
+  }
+
+
+  /*
+    Send request to Google Routes API.
   */
   const response = await fetch(
     GOOGLE_ROUTES_URL,
@@ -99,18 +136,8 @@ const searchRoutes = async ( startLocation, destination ) => {
       headers: {
         "Content-Type": "application/json",
 
-        /*
-          Authentication for
-          Google Routes API.
-        */
         "X-Goog-Api-Key": apiKey,
 
-        /*
-          Google Routes API requires a field mask.
-
-          We request only the information
-          our SafeHer app currently needs.
-        */
         "X-Goog-FieldMask":
           "routes.distanceMeters," +
           "routes.duration," +
@@ -121,43 +148,28 @@ const searchRoutes = async ( startLocation, destination ) => {
       body: JSON.stringify({
 
         /*
-          User-provided starting location.
+          Starting point.
+
+          This can be either:
+          - GPS coordinates
+          - text address
         */
-        origin: {
-          address: startLocation,
-        },
+        origin,
 
         /*
-          User-provided destination.
+          Destination remains a text address.
         */
         destination: {
           address: destination,
         },
 
-        /*
-          For now SafeHer calculates
-          driving routes.
-        */
         travelMode: "DRIVE",
 
-        /*
-          Consider current traffic conditions.
-        */
         routingPreference:
           "TRAFFIC_AWARE",
 
-        /*
-          Ask Google for alternative routes.
-
-          This supports the Route Search story
-          and will later help Sprint 3
-          route comparison.
-        */
         computeAlternativeRoutes: true,
 
-        /*
-          Return metric information.
-        */
         units: "METRIC",
 
         languageCode: "en-US",
@@ -167,20 +179,22 @@ const searchRoutes = async ( startLocation, destination ) => {
 
 
   /*
-    Convert Google's JSON response
-    into a JavaScript object.
+    Convert Google's response
+    into JavaScript.
   */
   const data =
     await response.json();
 
 
   /*
-    If Google returns an error,
-    stop the service.
+    Handle Google API errors.
   */
   if (!response.ok) {
 
-    console.error( "Google Routes API error:", data);
+    console.error(
+      "Google Routes API error:",
+      data
+    );
 
     throw new Error(
       data.error?.message ||
@@ -190,21 +204,19 @@ const searchRoutes = async ( startLocation, destination ) => {
 
 
   /*
-    If Google found no routes,
-    return an empty array.
+    If no routes were found.
   */
-  if (!data.routes ||
-      data.routes.length === 0) {
-
+  if (
+    !data.routes ||
+    data.routes.length === 0
+  ) {
     return [];
   }
 
 
   /*
-    Convert Google's response into
-    a simpler SafeHer route structure.
-
-    map() executes once for every route.
+    Convert Google routes into
+    SafeHer route objects.
   */
   const routes =
     data.routes.map(
@@ -212,45 +224,33 @@ const searchRoutes = async ( startLocation, destination ) => {
 
         return {
 
-          /*
-            Create our own simple ID.
-          */
-          id: `route-${index + 1}`,
+          id:
+            `route-${index + 1}`,
 
-          /*
-            First route is treated as
-            the main/recommended route.
-
-            Others are alternatives.
-          */
           name:
             index === 0
               ? "Recommended Route"
               : `Alternative Route ${index}`,
 
-          startLocation,
+          /*
+            If GPS was used, keep
+            "Current Location" as the
+            displayed starting point.
+          */
+          startLocation:
+            startLocation ||
+            "Current Location",
 
           destination,
 
-          /*
-            Keep original metric values
-            for calculations later.
-          */
           distanceMeters:
             route.distanceMeters,
 
-          /*
-            Human-readable distance.
-          */
           distance:
             formatDistance(
               route.distanceMeters
             ),
 
-          /*
-            Google duration value
-            e.g. "1080s".
-          */
           durationSeconds:
             parseFloat(
               route.duration.replace(
@@ -259,31 +259,15 @@ const searchRoutes = async ( startLocation, destination ) => {
               )
             ),
 
-          /*
-            User-friendly value
-            e.g. "18 min".
-          */
           duration:
             formatDuration(
               route.duration
             ),
 
-          /*
-            Encoded path of the route.
-
-            Later the React Native map
-            can decode this and draw
-            the actual route line.
-          */
           encodedPolyline:
             route.polyline
               ?.encodedPolyline || null,
 
-          /*
-            Google may identify whether
-            it is the default route
-            or an alternative.
-          */
           routeLabels:
             route.routeLabels || [],
         };
@@ -291,7 +275,6 @@ const searchRoutes = async ( startLocation, destination ) => {
     );
 
 
-  // Return final SafeHer route objects.
   return routes;
 };
 

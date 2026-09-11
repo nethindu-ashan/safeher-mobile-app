@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import MapView, {
   Marker,
   Polyline,
-  PROVIDER_GOOGLE,
+  //PROVIDER_GOOGLE,
 } from "react-native-maps";
 
 import {
@@ -52,10 +52,12 @@ export default function RouteOptionsScreen() {
 
     setRouteCoordinates(coordinates);
 
+    
     /*
      * Automatically fit the entire route
      * inside the map.
      */
+    /*
     if (coordinates.length > 0) {
       setTimeout(() => {
         mapRef.current?.fitToCoordinates(
@@ -71,7 +73,7 @@ export default function RouteOptionsScreen() {
           }
         );
       }, 300);
-    }
+    }*/
   }, [selectedRoute]);
 
   /*
@@ -123,19 +125,30 @@ export default function RouteOptionsScreen() {
           {/* Map */}
           <View className="mt-3 overflow-hidden rounded-2xl">
             <MapView
-              ref={mapRef}
-              provider={PROVIDER_GOOGLE}
-              style={{
-                width: "100%",
-                height: 400,
-              }}
-              initialRegion={{
-                latitude: startCoordinate.latitude,
-                longitude: startCoordinate.longitude,
-                latitudeDelta: 0.08,
-                longitudeDelta: 0.08,
-              }}
-            >
+                ref={mapRef}
+                style={{
+                  width: "100%",
+                  height: 400,
+                }}
+                initialRegion={{
+                  latitude: startCoordinate.latitude,
+                  longitude: startCoordinate.longitude,
+                  latitudeDelta: 0.08,
+                  longitudeDelta: 0.08,
+                }}
+                onMapReady={() => {
+                  mapRef.current?.fitToCoordinates(routeCoordinates, {
+                    edgePadding: {
+                      top: 60,
+                      right: 40,
+                      bottom: 60,
+                      left: 40,
+                    },
+                    animated: true,
+                  });
+                }}
+              >
+              
               {/* Starting location */}
               <Marker
                 coordinate={startCoordinate}
