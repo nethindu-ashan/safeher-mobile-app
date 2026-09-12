@@ -26,23 +26,20 @@ import { decodePolyline } from "../../src/utils/decodePolyline";
 
 import {getRouteSafetyIncidents, RouteSafetyIncident,} from "../../src/services/routeSafety.service";
 
+import { router } from "expo-router";
+
 export default function RouteOptionsScreen() {
   const { selectedRoute } = useRouteContext();
 
-  const [safetyIncidents, setSafetyIncidents] =
-  useState<RouteSafetyIncident[]>([]);
+  const [safetyIncidents, setSafetyIncidents] = useState<RouteSafetyIncident[]>([]);
 
-  const [isSafetyLoading, setIsSafetyLoading] =
-    useState(false);
+  const [isSafetyLoading, setIsSafetyLoading] = useState(false);
 
-  const [safetyError, setSafetyError] =
-    useState("");
+  const [safetyError, setSafetyError] =  useState("");
 
   const mapRef = useRef<MapView>(null);
 
-  const [routeCoordinates, setRouteCoordinates] =
-    useState<
-      {
+  const [routeCoordinates, setRouteCoordinates] = useState< {
         latitude: number;
         longitude: number;
       }[]
@@ -300,10 +297,7 @@ export default function RouteOptionsScreen() {
           <PrimaryButton
             title="Start Navigation"
             onPress={() => {
-              console.log(
-                "Start navigation:",
-                selectedRoute.id
-              );
+              router.push("/route/navigation");
             }}
           />
         </ScrollView>
