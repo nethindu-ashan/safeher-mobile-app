@@ -21,10 +21,8 @@ import AppInput from "../../src/components/AppInput";
 import PrimaryButton from "../../src/components/PrimaryButton";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import { COLORS } from "../../src/constants/theme";
-import {
-  RouteOption,
-  searchRoutes,
-} from "../../src/services/route.service";
+import { RouteOption, searchRoutes, } from "../../src/services/route.service";
+import { compareRouteSafety, RouteComparison, } from "../../src/services/routeSafety.service";
 
 import { decodePolyline } from "../../src/utils/decodePolyline";
 
@@ -51,8 +49,16 @@ export default function RouteScreen() {
   // Stores the routes returned by the backend.
   const [routes, setRoutes] = useState<RouteOption[]>([]);
 
-  const [currentLocation, setCurrentLocation] =
-  useState<Location.LocationObject | null>(null);
+
+  const [routeComparisons, setRouteComparisons] = useState<RouteComparison[]>([]);
+
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
+
+  const [comparisonError, setComparisonError] = useState("");
+
+  const [recommendedRouteId, setRecommendedRouteId] = useState<string | null>(null);
+
+  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
 
   // Controls the state of getting the user's current location.
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -72,8 +78,7 @@ export default function RouteScreen() {
       return;
     }
 
-    const location =
-      await Location.getCurrentPositionAsync({});
+    const location = await Location.getCurrentPositionAsync({});
 
     setCurrentLocation(location);
 
@@ -127,12 +132,67 @@ export default function RouteScreen() {
           destination: destination ,
         });
 
-        setRoutes(response.data.routes);
+        
+        const availableRoutes = response.data.routes;
+
+        setRoutes(availableRoutes);
+
+        // Clear previous comparison data
+        setRouteComparisons([]);
+        setComparisonError("");
+        setRecommendedRouteId(null);
 
         /*
-        * Extract the routes array from the backend response.
+        * Compare safety information for all
+        * available routes.
         */
-        setRoutes(response.data.routes);
+        try {
+          setIsComparisonLoading(true);
+
+          const comparisonResponse =
+            await compareRouteSafety(
+              availableRoutes,
+              0.5,
+              30
+            );
+
+          const comparisons = comparisonResponse.data.routes || [];
+
+          setRouteComparisons(comparisons);
+
+          if (comparisons.length > 0) {
+            const recommended = [...comparisons].sort(
+              (a, b) => {
+                // First priority: fewer incidents
+                if (a.incidentCount !== b.incidentCount) {
+                  return a.incidentCount - b.incidentCount;
+                }
+
+                // Second priority: shorter duration
+                return (
+                  (a.durationSeconds ?? Infinity) -
+                  (b.durationSeconds ?? Infinity)
+                );
+              }
+            )[0];
+
+            setRecommendedRouteId(recommended.id);
+          }
+
+        } catch (comparisonError) {
+          console.error(
+            "Route comparison error:",
+            comparisonError
+          );
+
+          setComparisonError(
+            comparisonError instanceof Error
+              ? comparisonError.message
+              : "Unable to compare route safety."
+          );
+        } finally {
+          setIsComparisonLoading(false);
+        }
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -273,7 +333,7 @@ const handleSelectRoute = (route: RouteOption) => {
                       {route.name}
                     </Text>
 
-                    {index === 0 && (
+                    {recommendedRouteId === route.id && (
                       <View className="rounded-full bg-light-purple px-3 py-1">
                         <Text className="text-xs font-semibold text-primary">
                           Recommended
@@ -309,6 +369,50 @@ const handleSelectRoute = (route: RouteOption) => {
                       </Text>
                     </View>
                   </View>
+
+                  {/* Route safety comparison */}
+                  {isComparisonLoading ? (
+                    <Text className="mb-4 text-sm text-app-text-secondary">
+                      Checking route safety...
+                    </Text>
+                  ) : (
+                    (() => {
+                      const comparison =
+                        routeComparisons.find(
+                          (item) => item.id === route.id
+                        );
+
+                      if (!comparison) {
+                        return null;
+                      }
+
+                      return (
+                        <View className="mb-4 rounded-xl bg-light-purple p-3">
+                          <Text className="text-sm font-semibold text-primary">
+                            Route Safety
+                          </Text>
+
+                          <Text className="mt-1 text-sm text-app-text">
+                            {comparison.incidentCount} recent report
+                            {comparison.incidentCount !== 1
+                              ? "s"
+                              : ""}{" "}
+                            near this route
+                          </Text>
+
+                          <Text className="mt-1 text-xs text-app-text-secondary">
+                            {comparison.comparisonLabel}
+                          </Text>
+
+                          {recommendedRouteId === route.id && (
+                            <Text className="mt-1 text-xs font-medium text-primary">
+                              Recommended based on fewer recent reports
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })()
+                  )}
 
                   {/* Select route button */}
                   <Pressable
