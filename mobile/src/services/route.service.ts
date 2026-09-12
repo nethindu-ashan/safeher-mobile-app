@@ -51,7 +51,7 @@ export type RouteSearchResponse = {
 export async function searchRoutes(
   request: RouteSearchRequest
 ): Promise<RouteSearchResponse> {
-  return await apiRequest("/route-search", {
+  return await apiRequest("/api/route-search", {
     method: "POST",
     body: JSON.stringify(request),
   });

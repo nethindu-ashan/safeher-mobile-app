@@ -29,7 +29,7 @@ export async function getRouteSafetyIncidents(
   corridorKm = 0.5,
   days = 30
 ) {
-  return await apiRequest("/route-safety/route-incidents", {
+  return await apiRequest("/api/route-safety/route-incidents", {
     method: "POST",
 
     body: JSON.stringify({
