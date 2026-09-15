@@ -4,7 +4,9 @@ import { apiRequest } from "./apiClient";
  * Data sent to the backend when searching for routes.
  */
 export type RouteSearchRequest = {
-  startLocation: string;
+  startLocation?: string;
+  startLatitude?: number;
+  startLongitude?: number;
   destination: string;
 };
 
@@ -49,7 +51,7 @@ export type RouteSearchResponse = {
 export async function searchRoutes(
   request: RouteSearchRequest
 ): Promise<RouteSearchResponse> {
-  return await apiRequest("/route-search", {
+  return await apiRequest("/api/route-search", {
     method: "POST",
     body: JSON.stringify(request),
   });

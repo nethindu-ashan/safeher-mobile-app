@@ -7,6 +7,7 @@ import routeSearchRoutes from "./routes/routeSearch.routes.js";
 import supportRoutes from "./routes/support.routes.js";
 import sosRoutes from "./routes/sos.routes.js";
 import routeSafetyRoutes from "./routes/routeSafety.routes.js";
+import notificationPreferenceRoutes from "./routes/notificationPreference.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/sos", sosRoutes);
 
 app.use("/api/route-safety", routeSafetyRoutes);
 
+app.use("/api/notification-preferences", notificationPreferenceRoutes);
 
 const PORT = process.env.PORT || 5001;
 

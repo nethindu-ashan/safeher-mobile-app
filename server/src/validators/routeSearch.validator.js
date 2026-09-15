@@ -4,25 +4,22 @@
   Purpose:
   Check the starting location and destination
   before the request reaches our controller.
+
+  The starting point can be:
+  1. A text location
+  2. Device GPS coordinates
 */
 
 const validateRouteSearch = (req, res, next) => {
-
-  // Read the values sent by the client.
-  const { startLocation, destination } = req.body;
-
-  /*
-    Check whether a starting location was provided.
-  */
-  if (!startLocation || startLocation.trim() === "") {
-    return res.status(400).json({
-      success: false,
-      message: "Starting location is required.",
-    });
-  }
+  const {
+    startLocation,
+    startLatitude,
+    startLongitude,
+    destination,
+  } = req.body;
 
   /*
-    Check whether a destination was provided.
+    Destination is always required.
   */
   if (!destination || destination.trim() === "") {
     return res.status(400).json({
@@ -32,44 +29,113 @@ const validateRouteSearch = (req, res, next) => {
   }
 
   /*
-    Prevent extremely short input such as:
-    A
-    B
+    Check whether a text starting location exists.
   */
-  if (startLocation.trim().length < 2) {
-    return res.status(400).json({
-      success: false,
-      message: "Starting location must contain at least 2 characters.",
-    });
-  }
+  const hasTextLocation =
+    typeof startLocation === "string" &&
+    startLocation.trim() !== "";
 
-  if (destination.trim().length < 2) {
+  /*
+    Check whether GPS coordinates exist.
+  */
+  const hasCoordinates =
+    startLatitude !== undefined &&
+    startLongitude !== undefined;
+
+  /*
+    A starting point must be provided
+    either as text or GPS coordinates.
+  */
+  if (!hasTextLocation && !hasCoordinates) {
     return res.status(400).json({
       success: false,
-      message: "Destination must contain at least 2 characters.",
+      message:
+        "Starting location or current location coordinates are required.",
     });
   }
 
   /*
-    Store clean versions of the data.
+    Validate GPS coordinates if provided.
+  */
+  if (hasCoordinates) {
+    if (
+      typeof startLatitude !== "number" ||
+      typeof startLongitude !== "number"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude must be numbers.",
+      });
+    }
 
-    Example:
-    "  SLIIT Malabe  "
+    if (
+      startLatitude < -90 ||
+      startLatitude > 90
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid latitude.",
+      });
+    }
 
-    becomes:
+    if (
+      startLongitude < -180 ||
+      startLongitude > 180
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid longitude.",
+      });
+    }
+  }
 
-    "SLIIT Malabe"
+  /*
+    Validate text starting location
+    when one is provided.
+  */
+  if (
+    hasTextLocation &&
+    startLocation.trim().length < 2
+  ) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Starting location must contain at least 2 characters.",
+    });
+  }
+
+  /*
+    Validate destination length.
+  */
+  if (destination.trim().length < 2) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Destination must contain at least 2 characters.",
+    });
+  }
+
+  /*
+    Store cleaned route search data.
   */
   req.routeSearchData = {
-    startLocation: startLocation.trim(),
+    startLocation: hasTextLocation
+      ? startLocation.trim()
+      : null,
+
+    startLatitude: hasCoordinates
+      ? startLatitude
+      : null,
+
+    startLongitude: hasCoordinates
+      ? startLongitude
+      : null,
+
     destination: destination.trim(),
   };
 
   /*
     Validation passed.
-
-    next() tells Express:
-    "Continue to the next function."
   */
   next();
 };
