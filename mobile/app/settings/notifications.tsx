@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import {  useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -11,11 +11,36 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COLORS } from "../../src/constants/theme";
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} from "../../src/services/notificationPreferenceService";
 
 export default function NotificationPreferencesScreen() {
-  const [nearbyAlerts, setNearbyAlerts] = useState(true);
-  const [emergencyAlerts, setEmergencyAlerts] = useState(true);
-  const [communityUpdates, setCommunityUpdates] = useState(true);
+  const [nearbyAlerts, setNearbyAlerts] = useState(false);
+  const [emergencyAlerts, setEmergencyAlerts] = useState(false);
+  const [communityUpdates, setCommunityUpdates] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+
+  useEffect(() => {
+  async function loadPreferences() {
+    try {
+      const preferences = await getNotificationPreferences();
+
+      setNearbyAlerts(preferences.nearbyAlerts);
+      setEmergencyAlerts(preferences.emergencyAlerts);
+      setCommunityUpdates(preferences.communityUpdates);
+    } catch (error) {
+      console.error("Failed to load notification preferences:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadPreferences();
+}, []);
 
   return (
     <SafeAreaView
@@ -82,10 +107,11 @@ export default function NotificationPreferencesScreen() {
                   value={nearbyAlerts}
                   onValueChange={setNearbyAlerts}
                   trackColor={{
-                    false: "#D9D4DC",
+                    false: "#B8ADBF",
                     true: COLORS.primary,
                   }}
                   thumbColor="#FFFFFF"
+                  ios_backgroundColor="#B8ADBF"
                 />
               </View>
             </View>
@@ -109,10 +135,11 @@ export default function NotificationPreferencesScreen() {
                   value={emergencyAlerts}
                   onValueChange={setEmergencyAlerts}
                   trackColor={{
-                    false: "#D9D4DC",
+                    false: "#B8ADBF",
                     true: COLORS.primary,
                   }}
                   thumbColor="#FFFFFF"
+                  ios_backgroundColor="#B8ADBF"
                 />
               </View>
             </View>
@@ -136,10 +163,11 @@ export default function NotificationPreferencesScreen() {
                   value={communityUpdates}
                   onValueChange={setCommunityUpdates}
                   trackColor={{
-                    false: "#D9D4DC",
+                    false: "#B8ADBF",
                     true: COLORS.primary,
                   }}
                   thumbColor="#FFFFFF"
+                  ios_backgroundColor="#B8ADBF"
                 />
               </View>
             </View>
@@ -148,16 +176,26 @@ export default function NotificationPreferencesScreen() {
           {/* Save Button */}
           <Pressable
             className="mt-8 items-center rounded-xl bg-primary px-5 py-4 active:opacity-80"
-            onPress={() => {
-              console.log({
-                nearbyAlerts,
-                emergencyAlerts,
-                communityUpdates,
-              });
+            onPress={async () => {
+                  try {
+                      setSaving(true);
+
+                      await updateNotificationPreferences({
+                              nearbyAlerts,
+                              emergencyAlerts,
+                              communityUpdates,
+                      });
+
+                    console.log("Notification preferences saved successfully");
+                  } catch (error) {
+                    console.error("Failed to save notification preferences:", error);
+                  } finally {
+                    setSaving(false);
+                  }
             }}
           >
             <Text className="text-base font-bold text-white">
-              Save Preferences
+              {saving ? "Saving..." : "Save Preferences"}
             </Text>
           </Pressable>
         </ScrollView>
