@@ -48,3 +48,14 @@ model EmergencySOS {
 
   @@map("emergency_sos")
 }
+
+model NotificationPreference {
+  id               String   @id @default(uuid()) @db.Uuid
+  nearbyAlerts     Boolean  @default(true) @map("nearby_alerts")
+  emergencyAlerts  Boolean  @default(true) @map("emergency_alerts")
+  communityUpdates Boolean  @default(true) @map("community_updates")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("notification_preferences")
+}

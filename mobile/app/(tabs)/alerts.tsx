@@ -41,8 +41,6 @@ export default function AlertsScreen() {
         longitude
       );
 
-      console.log("Nearby incidents:", response.data);
-
       setIncidents(response.data);
     } catch (error) {
       console.error("Failed to load nearby incidents:", error);
