@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import MapView, {
   Marker,
   Polyline,
-  PROVIDER_GOOGLE,
+  //PROVIDER_GOOGLE,
 } from "react-native-maps";
 
 import {
@@ -24,14 +24,22 @@ import { useRouteContext } from "../../src/context/RouteContext";
 
 import { decodePolyline } from "../../src/utils/decodePolyline";
 
+import {getRouteSafetyIncidents, RouteSafetyIncident,} from "../../src/services/routeSafety.service";
+
+import { router } from "expo-router";
+
 export default function RouteOptionsScreen() {
   const { selectedRoute } = useRouteContext();
 
+  const [safetyIncidents, setSafetyIncidents] = useState<RouteSafetyIncident[]>([]);
+
+  const [isSafetyLoading, setIsSafetyLoading] = useState(false);
+
+  const [safetyError, setSafetyError] =  useState("");
+
   const mapRef = useRef<MapView>(null);
 
-  const [routeCoordinates, setRouteCoordinates] =
-    useState<
-      {
+  const [routeCoordinates, setRouteCoordinates] = useState< {
         latitude: number;
         longitude: number;
       }[]
@@ -46,33 +54,48 @@ export default function RouteOptionsScreen() {
       return;
     }
 
-    const coordinates = decodePolyline(
-      selectedRoute.encodedPolyline
-    );
+    const loadRouteData = async () => {
+      // Decode route polyline for the map
+      const coordinates = decodePolyline(
+        selectedRoute.encodedPolyline
+      );
 
-    setRouteCoordinates(coordinates);
+      setRouteCoordinates(coordinates);
 
-    /*
-     * Automatically fit the entire route
-     * inside the map.
-     */
-    if (coordinates.length > 0) {
-      setTimeout(() => {
-        mapRef.current?.fitToCoordinates(
-          coordinates,
-          {
-            edgePadding: {
-              top: 60,
-              right: 40,
-              bottom: 60,
-              left: 40,
-            },
-            animated: true,
-          }
+      // Load safety incidents near this route
+      try {
+        setIsSafetyLoading(true);
+        setSafetyError("");
+
+        const response = await getRouteSafetyIncidents(
+          selectedRoute.encodedPolyline,
+          0.5,
+          30
         );
-      }, 300);
-    }
-  }, [selectedRoute]);
+
+        setSafetyIncidents(
+          response.data.incidents || []
+        );
+      } catch (error) {
+        console.error(
+          "Route safety error:",
+          error
+        );
+
+        setSafetyError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load route safety information."
+        );
+
+        setSafetyIncidents([]);
+      } finally {
+        setIsSafetyLoading(false);
+      }
+    };
+
+  loadRouteData();
+}, [selectedRoute]);
 
   /*
    * If the user somehow opens this page
@@ -123,19 +146,30 @@ export default function RouteOptionsScreen() {
           {/* Map */}
           <View className="mt-3 overflow-hidden rounded-2xl">
             <MapView
-              ref={mapRef}
-              provider={PROVIDER_GOOGLE}
-              style={{
-                width: "100%",
-                height: 400,
-              }}
-              initialRegion={{
-                latitude: startCoordinate.latitude,
-                longitude: startCoordinate.longitude,
-                latitudeDelta: 0.08,
-                longitudeDelta: 0.08,
-              }}
-            >
+                ref={mapRef}
+                style={{
+                  width: "100%",
+                  height: 400,
+                }}
+                initialRegion={{
+                  latitude: startCoordinate.latitude,
+                  longitude: startCoordinate.longitude,
+                  latitudeDelta: 0.08,
+                  longitudeDelta: 0.08,
+                }}
+                onMapReady={() => {
+                  mapRef.current?.fitToCoordinates(routeCoordinates, {
+                    edgePadding: {
+                      top: 60,
+                      right: 40,
+                      bottom: 60,
+                      left: 40,
+                    },
+                    animated: true,
+                  });
+                }}
+              >
+              
               {/* Starting location */}
               <Marker
                 coordinate={startCoordinate}
@@ -149,6 +183,20 @@ export default function RouteOptionsScreen() {
                 title="Destination"
                 description={selectedRoute.destination}
               />
+
+              {/* Safety incidents */}
+              {safetyIncidents.map((incident) => (
+                <Marker
+                  key={incident.id}
+                  coordinate={{
+                    latitude: incident.latitude,
+                    longitude: incident.longitude,
+                  }}
+                  title={incident.category}
+                  description={`${incident.distanceToRouteKm} km from route`}
+                  pinColor={COLORS.error}
+                />
+              ))}
 
               {/* Route line */}
               <Polyline
@@ -193,14 +241,63 @@ export default function RouteOptionsScreen() {
             </View>
           </AppCard>
 
+          <AppCard>
+            <Text className="text-xl font-bold text-app-text">
+              Route Safety
+            </Text>
+
+            {isSafetyLoading ? (
+              <Text className="mt-3 text-sm text-app-text-secondary">
+                Checking recent safety reports...
+              </Text>
+            ) : safetyError ? (
+              <Text className="mt-3 text-sm text-red-500">
+                {safetyError}
+              </Text>
+            ) : safetyIncidents.length === 0 ? (
+              <Text className="mt-3 text-sm text-app-text-secondary">
+                No recent community reports were found near this route.
+              </Text>
+            ) : (
+              <>
+                <Text className="mt-3 text-sm text-app-text-secondary">
+                  {safetyIncidents.length} recent community report
+                  {safetyIncidents.length !== 1 ? "s" : ""} found
+                  near this route.
+                </Text>
+
+                {safetyIncidents.map((incident) => (
+                  <View
+                    key={incident.id}
+                    className="mt-4 rounded-xl bg-red-50 p-3"
+                  >
+                    <Text className="font-semibold text-app-text">
+                      {incident.category}
+                    </Text>
+
+                    <Text className="mt-1 text-sm text-app-text-secondary">
+                      {incident.distanceToRouteKm} km from route
+                    </Text>
+
+                    <Text className="mt-2 text-sm text-app-text-secondary">
+                      {incident.description}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            )}
+
+            <Text className="mt-4 text-xs text-app-text-secondary">
+              Safety information is based on recent community reports
+              and does not guarantee that a route is completely safe.
+            </Text>
+          </AppCard>
+
           {/* Navigation button */}
           <PrimaryButton
             title="Start Navigation"
             onPress={() => {
-              console.log(
-                "Start navigation:",
-                selectedRoute.id
-              );
+              router.push("/route/navigation");
             }}
           />
         </ScrollView>
