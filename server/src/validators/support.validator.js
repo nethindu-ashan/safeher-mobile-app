@@ -176,32 +176,3 @@ export const validatePlaceDetailsRequest = (
 
   next();
 };
-
-
-/**
- * Validate SafeHer SupportService UUID.
- *
- * GET /api/support/:id
- */
-export const validateSupportServiceId = (
-  req,
-  res,
-  next
-) => {
-  const { id } = req.params;
-
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-  if (
-    !id ||
-    !uuidPattern.test(id)
-  ) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid support service ID",
-    });
-  }
-
-  next();
-};
