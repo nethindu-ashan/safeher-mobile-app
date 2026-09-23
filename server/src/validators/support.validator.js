@@ -3,17 +3,11 @@
 // ============================================================
 
 const ALLOWED_SUPPORT_TYPES = [
-  "ALL",
   "POLICE",
   "HOSPITAL",
   "PHARMACY",
-  "COMMUNITY_CENTER",
-  "COMMUNITY",
-  "WOMENS_SUPPORT",
-  "WOMEN_SUPPORT",
-  "SAFE_SPACE",
-  "SAFE_PLACE",
-  "MEDICAL",
+  "CLINIC",
+  "FIRE_STATION",
 ];
 
 
@@ -34,18 +28,20 @@ export const validateNearbySupportQuery = (
   const {
     lat,
     lng,
-    type = "ALL",
+    type,
     radius = 5000,
   } = req.query;
 
   // Current location is required.
   if (
     lat === undefined ||
-    lng === undefined
+    lng === undefined ||
+    type === undefined
   ) {
     return res.status(400).json({
       success: false,
-      message: "Latitude and longitude are required",
+      message:
+        "Latitude, longitude, and category are required",
     });
   }
 
