@@ -11,7 +11,7 @@ export const getNearbySupportServices =
       const {
         lat,
         lng,
-        type = "ALL",
+        type,
         radius = 5000,
       } = req.query;
 
@@ -26,14 +26,10 @@ export const getNearbySupportServices =
 
       return res.status(200).json({
         success: true,
-        message:
-          "Nearby support services retrieved successfully",
+        category:
+          String(type).trim().toUpperCase(),
         count:
           nearbyServices.length,
-        requestedType:
-          String(type).toUpperCase(),
-        radiusMeters:
-          Number(radius),
         data:
           nearbyServices,
       });
@@ -43,7 +39,10 @@ export const getNearbySupportServices =
         error.message
       );
 
-      return res.status(500).json({
+      const statusCode =
+        error.statusCode ?? 500;
+
+      return res.status(statusCode).json({
         success: false,
         message:
           error.message,
