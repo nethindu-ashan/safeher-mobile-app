@@ -143,55 +143,79 @@ export default function RouteScreen() {
         setRecommendedRouteId(null);
 
         /*
-        * Compare safety information for all
-        * available routes.
+        * Route comparison requires at least
+        * two available routes.
         */
-        try {
-          setIsComparisonLoading(true);
+        if (availableRoutes.length >= 2) {
+          try {
+            setIsComparisonLoading(true);
 
-          const comparisonResponse =
-            await compareRouteSafety(
-              availableRoutes,
-              0.5,
-              30
+            const comparisonResponse =
+              await compareRouteSafety(
+                availableRoutes,
+                0.5,
+                30
+              );
+
+            const comparisons =
+              comparisonResponse.data.routes || [];
+
+            setRouteComparisons(comparisons);
+
+            /*
+            * Select the recommended route.
+            *
+            * First priority:
+            * fewer recent incidents.
+            *
+            * Second priority:
+            * shorter travel duration.
+            */
+            if (comparisons.length > 0) {
+              const recommended = [...comparisons].sort(
+                (a, b) => {
+                  if (
+                    a.incidentCount !==
+                    b.incidentCount
+                  ) {
+                    return (
+                      a.incidentCount -
+                      b.incidentCount
+                    );
+                  }
+
+                  return (
+                    (a.durationSeconds ?? Infinity) -
+                    (b.durationSeconds ?? Infinity)
+                  );
+                }
+              )[0];
+
+              setRecommendedRouteId(
+                recommended.id
+              );
+            }
+          } catch (comparisonError) {
+            console.error(
+              "Route comparison error:",
+              comparisonError
             );
 
-          const comparisons = comparisonResponse.data.routes || [];
-
-          setRouteComparisons(comparisons);
-
-          if (comparisons.length > 0) {
-            const recommended = [...comparisons].sort(
-              (a, b) => {
-                // First priority: fewer incidents
-                if (a.incidentCount !== b.incidentCount) {
-                  return a.incidentCount - b.incidentCount;
-                }
-
-                // Second priority: shorter duration
-                return (
-                  (a.durationSeconds ?? Infinity) -
-                  (b.durationSeconds ?? Infinity)
-                );
-              }
-            )[0];
-
-            setRecommendedRouteId(recommended.id);
+            setComparisonError(
+              comparisonError instanceof Error
+                ? comparisonError.message
+                : "Unable to compare route safety."
+            );
+          } finally {
+            setIsComparisonLoading(false);
           }
-
-        } catch (comparisonError) {
-          console.error(
-            "Route comparison error:",
-            comparisonError
-          );
-
-          setComparisonError(
-            comparisonError instanceof Error
-              ? comparisonError.message
-              : "Unable to compare route safety."
-          );
-        } finally {
+        } else {
+          /*
+          * Only one route is available.
+          * Comparison is not possible.
+          */
           setIsComparisonLoading(false);
+          setComparisonError("");
         }
       } catch (error) {
         setErrorMessage(
