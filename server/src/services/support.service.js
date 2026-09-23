@@ -8,9 +8,6 @@ import "dotenv/config";
 const GOOGLE_NEARBY_URL =
   "https://places.googleapis.com/v1/places:searchNearby";
 
-const GOOGLE_TEXT_SEARCH_URL =
-  "https://places.googleapis.com/v1/places:searchText";
-
 const GOOGLE_PLACE_DETAILS_URL =
   "https://places.googleapis.com/v1/places";
 
@@ -27,39 +24,23 @@ const MAX_RESULTS = 20;
 
 const CATEGORY_CONFIG = {
   POLICE: {
-    mode: "nearby",
     types: ["police"],
   },
 
   HOSPITAL: {
-    mode: "nearby",
-    types: [
-      "hospital",
-      "general_hospital",
-      "medical_center",
-    ],
+    types: ["hospital", "medical_center"],
   },
 
   PHARMACY: {
-    mode: "nearby",
     types: ["pharmacy"],
   },
 
-  COMMUNITY_CENTER: {
-    mode: "nearby",
-    types: ["community_center"],
+  CLINIC: {
+    types: ["doctor", "medical_clinic"],
   },
 
-  // Google does not have an exact dedicated place type
-  // for these SafeHer UI categories.
-  WOMENS_SUPPORT: {
-    mode: "text",
-    query: "women's support center",
-  },
-
-  SAFE_SPACE: {
-    mode: "text",
-    query: "women's shelter",
+  FIRE_STATION: {
+    types: ["fire_station"],
   },
 };
 
@@ -79,47 +60,6 @@ const getGoogleApiKey = () => {
   }
 
   return apiKey;
-};
-
-
-/**
- * Support older category names used during development.
- */
-const normalizeCategory = (type = "ALL") => {
-  const value = String(type)
-    .trim()
-    .toUpperCase();
-
-  const aliases = {
-    ALL: "ALL",
-
-    POLICE: "POLICE",
-
-    HOSPITAL: "HOSPITAL",
-    MEDICAL: "HOSPITAL",
-
-    PHARMACY: "PHARMACY",
-
-    COMMUNITY: "COMMUNITY_CENTER",
-    COMMUNITY_CENTER: "COMMUNITY_CENTER",
-
-    WOMEN_SUPPORT: "WOMENS_SUPPORT",
-    WOMENS_SUPPORT: "WOMENS_SUPPORT",
-    WOMEN_SUPPORT_CENTER: "WOMENS_SUPPORT",
-
-    SAFE_PLACE: "SAFE_SPACE",
-    SAFE_SPACE: "SAFE_SPACE",
-  };
-
-  const normalized = aliases[value];
-
-  if (!normalized) {
-    throw new Error(
-      "Invalid support service type"
-    );
-  }
-
-  return normalized;
 };
 
 
@@ -217,10 +157,10 @@ const calculateDistanceKm = (
  */
 const detectCategory = (
   googleTypes = [],
-  fallbackCategory = null
+  category = null
 ) => {
-  if (fallbackCategory) {
-    return fallbackCategory;
+  if (category) {
+    return category;
   }
 
   if (googleTypes.includes("police")) {
@@ -229,23 +169,26 @@ const detectCategory = (
 
   if (
     googleTypes.includes("hospital") ||
-    googleTypes.includes("general_hospital") ||
     googleTypes.includes("medical_center")
   ) {
     return "HOSPITAL";
   }
 
   if (
-    googleTypes.includes("pharmacy") ||
-    googleTypes.includes("drugstore")
+    googleTypes.includes("pharmacy")
   ) {
     return "PHARMACY";
   }
 
   if (
-    googleTypes.includes("community_center")
+    googleTypes.includes("doctor") ||
+    googleTypes.includes("medical_clinic")
   ) {
-    return "COMMUNITY_CENTER";
+    return "CLINIC";
+  }
+
+  if (googleTypes.includes("fire_station")) {
+    return "FIRE_STATION";
   }
 
   return "OTHER";
@@ -259,7 +202,7 @@ const formatGooglePlace = (
   place,
   userLat,
   userLng,
-  fallbackCategory = null
+  category
 ) => {
   const latitude =
     place.location?.latitude ?? null;
@@ -282,19 +225,20 @@ const formatGooglePlace = (
   }
 
   return {
+    id: place.id,
+
     placeId: place.id,
 
     name:
       place.displayName?.text ||
       "Unknown Support Service",
 
+    category,
+
     category: detectCategory(
       place.types || [],
-      fallbackCategory
+      category
     ),
-
-    googleType:
-      place.primaryType || null,
 
     address:
       place.formattedAddress ||
@@ -305,6 +249,11 @@ const formatGooglePlace = (
     longitude,
 
     // Approximate straight-line distance.
+    distance:
+      distanceKm !== null
+        ? Number(distanceKm.toFixed(1))
+        : null,
+
     distanceKm:
       distanceKm !== null
         ? Number(distanceKm.toFixed(1))
@@ -312,15 +261,6 @@ const formatGooglePlace = (
 
     rating:
       place.rating ?? null,
-
-    userRatingCount:
-      place.userRatingCount ?? 0,
-
-    isOpen:
-      typeof place.currentOpeningHours
-        ?.openNow === "boolean"
-        ? place.currentOpeningHours.openNow
-        : null,
 
     phone:
       place.nationalPhoneNumber ||
@@ -369,13 +309,13 @@ const searchNearbyByTypes = async (
   latitude,
   longitude,
   radius,
-  types,
-  category = null
+  category
 ) => {
   const apiKey = getGoogleApiKey();
 
   const requestBody = {
-    includedTypes: types,
+    includedTypes:
+      CATEGORY_CONFIG[category].types,
 
     maxResultCount: MAX_RESULTS,
 
@@ -410,96 +350,10 @@ const searchNearbyByTypes = async (
           "places.displayName," +
           "places.formattedAddress," +
           "places.location," +
-          "places.primaryType," +
           "places.types," +
           "places.rating," +
-          "places.userRatingCount," +
-          "places.currentOpeningHours," +
           "places.nationalPhoneNumber," +
-          "places.internationalPhoneNumber," +
-          "places.googleMapsUri",
-      },
-
-      body: JSON.stringify(
-        requestBody
-      ),
-    }
-  );
-
-  const data =
-    await readGoogleResponse(response);
-
-  return (data.places || []).map(
-    (place) =>
-      formatGooglePlace(
-        place,
-        latitude,
-        longitude,
-        category
-      )
-  );
-};
-
-
-// ============================================================
-// GOOGLE TEXT SEARCH
-// ============================================================
-
-const searchNearbyByText = async (
-  latitude,
-  longitude,
-  radius,
-  textQuery,
-  category
-) => {
-  const apiKey = getGoogleApiKey();
-
-  const requestBody = {
-    textQuery,
-
-    pageSize: MAX_RESULTS,
-
-    rankPreference: "DISTANCE",
-
-    // Google treats this as a bias.
-    // We filter by radius ourselves afterwards.
-    locationBias: {
-      circle: {
-        center: {
-          latitude,
-          longitude,
-        },
-
-        radius,
-      },
-    },
-  };
-
-  const response = await fetch(
-    GOOGLE_TEXT_SEARCH_URL,
-    {
-      method: "POST",
-
-      headers: {
-        "Content-Type":
-          "application/json",
-
-        "X-Goog-Api-Key":
-          apiKey,
-
-        "X-Goog-FieldMask":
-          "places.id," +
-          "places.displayName," +
-          "places.formattedAddress," +
-          "places.location," +
-          "places.primaryType," +
-          "places.types," +
-          "places.rating," +
-          "places.userRatingCount," +
-          "places.currentOpeningHours," +
-          "places.nationalPhoneNumber," +
-          "places.internationalPhoneNumber," +
-          "places.googleMapsUri",
+          "places.internationalPhoneNumber",
       },
 
       body: JSON.stringify(
@@ -512,6 +366,11 @@ const searchNearbyByText = async (
     await readGoogleResponse(response);
 
   return (data.places || [])
+    .filter((place) =>
+      (place.types || []).some((type) =>
+        CATEGORY_CONFIG[category].types.includes(type)
+      )
+    )
     .map((place) =>
       formatGooglePlace(
         place,
@@ -519,20 +378,7 @@ const searchNearbyByText = async (
         longitude,
         category
       )
-    )
-
-    // locationBias is not a strict radius,
-    // therefore filter manually.
-    .filter((place) => {
-      if (place.distanceKm === null) {
-        return false;
-      }
-
-      return (
-        place.distanceKm * 1000 <=
-        radius
-      );
-    });
+    );
 };
 
 
@@ -544,7 +390,7 @@ export const getNearbySupportServices =
   async (
     latitude,
     longitude,
-    type = "ALL",
+    type,
     radius = DEFAULT_RADIUS
   ) => {
     const location =
@@ -554,95 +400,24 @@ export const getNearbySupportServices =
         radius
       );
 
-    const category =
-      normalizeCategory(type);
+    const category = String(type)
+      .trim()
+      .toUpperCase();
 
-    let results = [];
-
-
-    // --------------------------------------------------------
-    // ALL CATEGORIES
-    // --------------------------------------------------------
-
-    if (category === "ALL") {
-      const normalPlacesPromise =
-        searchNearbyByTypes(
-          location.lat,
-          location.lng,
-          location.radius,
-          [
-            "police",
-            "hospital",
-            "general_hospital",
-            "medical_center",
-            "pharmacy",
-            "community_center",
-          ]
-        );
-
-      const womenSupportPromise =
-        searchNearbyByText(
-          location.lat,
-          location.lng,
-          location.radius,
-          CATEGORY_CONFIG
-            .WOMENS_SUPPORT.query,
-          "WOMENS_SUPPORT"
-        );
-
-      const safeSpacePromise =
-        searchNearbyByText(
-          location.lat,
-          location.lng,
-          location.radius,
-          CATEGORY_CONFIG
-            .SAFE_SPACE.query,
-          "SAFE_SPACE"
-        );
-
-      const [
-        normalPlaces,
-        womenSupportPlaces,
-        safeSpacePlaces,
-      ] = await Promise.all([
-        normalPlacesPromise,
-        womenSupportPromise,
-        safeSpacePromise,
-      ]);
-
-      results = [
-        ...normalPlaces,
-        ...womenSupportPlaces,
-        ...safeSpacePlaces,
-      ];
-    } else {
-      // ------------------------------------------------------
-      // ONE CATEGORY
-      // ------------------------------------------------------
-
-      const config =
-        CATEGORY_CONFIG[category];
-
-      if (config.mode === "nearby") {
-        results =
-          await searchNearbyByTypes(
-            location.lat,
-            location.lng,
-            location.radius,
-            config.types,
-            category
-          );
-      } else {
-        results =
-          await searchNearbyByText(
-            location.lat,
-            location.lng,
-            location.radius,
-            config.query,
-            category
-          );
-      }
+    if (!CATEGORY_CONFIG[category]) {
+      const error = new Error(
+        "Invalid support service type"
+      );
+      error.statusCode = 400;
+      throw error;
     }
+
+    const results = await searchNearbyByTypes(
+      location.lat,
+      location.lng,
+      location.radius,
+      category
+    );
 
 
     // ========================================================
@@ -653,9 +428,9 @@ export const getNearbySupportServices =
       new Map();
 
     for (const place of results) {
-      if (place.placeId) {
+      if (place.id) {
         uniquePlaces.set(
-          place.placeId,
+          place.id,
           place
         );
       }
@@ -671,11 +446,11 @@ export const getNearbySupportServices =
     )
       .sort((a, b) => {
         const distanceA =
-          a.distanceKm ??
+          a.distance ??
           Number.MAX_VALUE;
 
         const distanceB =
-          b.distanceKm ??
+          b.distance ??
           Number.MAX_VALUE;
 
         return (
