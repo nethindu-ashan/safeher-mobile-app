@@ -3,17 +3,11 @@
 // ============================================================
 
 const ALLOWED_SUPPORT_TYPES = [
-  "ALL",
   "POLICE",
   "HOSPITAL",
   "PHARMACY",
-  "COMMUNITY_CENTER",
-  "COMMUNITY",
-  "WOMENS_SUPPORT",
-  "WOMEN_SUPPORT",
-  "SAFE_SPACE",
-  "SAFE_PLACE",
-  "MEDICAL",
+  "CLINIC",
+  "FIRE_STATION",
 ];
 
 
@@ -34,18 +28,20 @@ export const validateNearbySupportQuery = (
   const {
     lat,
     lng,
-    type = "ALL",
+    type,
     radius = 5000,
   } = req.query;
 
   // Current location is required.
   if (
     lat === undefined ||
-    lng === undefined
+    lng === undefined ||
+    type === undefined
   ) {
     return res.status(400).json({
       success: false,
-      message: "Latitude and longitude are required",
+      message:
+        "Latitude, longitude, and category are required",
     });
   }
 
@@ -171,35 +167,6 @@ export const validatePlaceDetailsRequest = (
     return res.status(400).json({
       success: false,
       message: "Invalid longitude",
-    });
-  }
-
-  next();
-};
-
-
-/**
- * Validate SafeHer SupportService UUID.
- *
- * GET /api/support/:id
- */
-export const validateSupportServiceId = (
-  req,
-  res,
-  next
-) => {
-  const { id } = req.params;
-
-  const uuidPattern =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-  if (
-    !id ||
-    !uuidPattern.test(id)
-  ) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid support service ID",
     });
   }
 

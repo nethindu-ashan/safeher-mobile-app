@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -15,6 +15,10 @@ import {
 import MapView, {
   Marker,
 } from "react-native-maps";
+import Animated, {
+  FadeInDown,
+  FadeIn,
+} from "react-native-reanimated";
 
 import {
   SafeAreaView,
@@ -28,12 +32,12 @@ import {
 } from "../../src/constants/theme";
 
 import {
-  getSupportPlaceDetails,
-} from "../../src/services/supportService";
+  getNearbyHelpDetails,
+} from "../../src/services/nearbyHelpService";
 
 import type {
-  SupportPlaceDetails,
-} from "../../src/types/support";
+  NearbyHelpDetails,
+} from "../../src/types/nearbyHelp";
 
 
 // ============================================================
@@ -55,7 +59,7 @@ export default function ServiceDetailsScreen() {
   // ==========================================================
 
   const [service, setService] =
-    useState<SupportPlaceDetails | null>(
+    useState<NearbyHelpDetails | null>(
       null
     );
 
@@ -70,7 +74,7 @@ export default function ServiceDetailsScreen() {
   // LOAD SERVICE DETAILS
   // ==========================================================
 
-  const loadServiceDetails =
+  const loadServiceDetails = useCallback(
     async () => {
       try {
         setLoading(true);
@@ -110,7 +114,7 @@ export default function ServiceDetailsScreen() {
 
         // Call backend Place Details API
         const response =
-          await getSupportPlaceDetails(
+          await getNearbyHelpDetails(
             params.id,
             hasValidLocation
               ? latitude
@@ -136,16 +140,18 @@ export default function ServiceDetailsScreen() {
       } finally {
         setLoading(false);
       }
-    };
+    }, [params.id, params.lat, params.lng]);
 
 
   useEffect(() => {
-    void loadServiceDetails();
-  }, [
-    params.id,
-    params.lat,
-    params.lng,
-  ]);
+    const timeout = setTimeout(() => {
+      void loadServiceDetails();
+    }, 0);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [loadServiceDetails]);
 
 
   // ==========================================================
@@ -387,6 +393,10 @@ export default function ServiceDetailsScreen() {
             BASIC INFORMATION
         ==================================================== */}
 
+        <Animated.View
+          entering={FadeInDown.duration(420)}
+          className="mb-4"
+        >
         <AppCard>
           <View className="flex-row items-start">
             <View className="h-12 w-12 items-center justify-center rounded-full bg-light-purple">
@@ -490,6 +500,7 @@ export default function ServiceDetailsScreen() {
             )}
           </View>
         </AppCard>
+        </Animated.View>
 
 
         {/* ====================================================
@@ -498,7 +509,8 @@ export default function ServiceDetailsScreen() {
 
         {service.latitude !== null &&
           service.longitude !== null && (
-            <View
+            <Animated.View
+              entering={FadeIn.delay(120).duration(420)}
               className="mb-4 overflow-hidden rounded-2xl border border-app-border"
               style={{
                 height: 220,
@@ -533,7 +545,7 @@ export default function ServiceDetailsScreen() {
                   }
                 />
               </MapView>
-            </View>
+            </Animated.View>
           )}
 
 
@@ -541,6 +553,10 @@ export default function ServiceDetailsScreen() {
             CONTACT INFORMATION
         ==================================================== */}
 
+        <Animated.View
+          entering={FadeInDown.delay(180).duration(420)}
+          className="mb-4"
+        >
         <AppCard>
           <Text className="text-base font-bold text-app-text">
             Contact Information
@@ -610,12 +626,17 @@ export default function ServiceDetailsScreen() {
             </View>
           )}
         </AppCard>
+        </Animated.View>
 
 
         {/* ====================================================
             OPENING HOURS
         ==================================================== */}
 
+        <Animated.View
+          entering={FadeInDown.delay(240).duration(420)}
+          className="mb-4"
+        >
         <AppCard>
           <View className="flex-row items-center">
             <Ionicons
@@ -650,13 +671,17 @@ export default function ServiceDetailsScreen() {
             </Text>
           )}
         </AppCard>
+        </Animated.View>
 
 
         {/* ====================================================
             ACTION BUTTONS
         ==================================================== */}
 
-        <View className="mt-1 flex-row">
+        <Animated.View
+          entering={FadeInDown.delay(300).duration(420)}
+          className="mt-1 flex-row"
+        >
 
           {/* Call */}
           <Pressable
@@ -677,7 +702,7 @@ export default function ServiceDetailsScreen() {
             />
 
             <Text className="ml-2 font-semibold text-white">
-              Call Service
+              Call Now
             </Text>
           </Pressable>
 
@@ -696,10 +721,10 @@ export default function ServiceDetailsScreen() {
             />
 
             <Text className="ml-2 font-semibold text-primary">
-              Get Route
+              Open in Google Maps
             </Text>
           </Pressable>
-        </View>
+        </Animated.View>
 
 
         {/* ====================================================
