@@ -28,12 +28,12 @@ import {
 } from "../../src/constants/theme";
 
 import {
-  getSupportPlaceDetails,
-} from "../../src/services/supportService";
+  getNearbyHelpDetails,
+} from "../../src/services/nearbyHelpService";
 
 import type {
-  SupportPlaceDetails,
-} from "../../src/types/support";
+  NearbyHelpDetails,
+} from "../../src/types/nearbyHelp";
 
 
 // ============================================================
@@ -55,7 +55,7 @@ export default function ServiceDetailsScreen() {
   // ==========================================================
 
   const [service, setService] =
-    useState<SupportPlaceDetails | null>(
+    useState<NearbyHelpDetails | null>(
       null
     );
 
@@ -110,7 +110,7 @@ export default function ServiceDetailsScreen() {
 
         // Call backend Place Details API
         const response =
-          await getSupportPlaceDetails(
+          await getNearbyHelpDetails(
             params.id,
             hasValidLocation
               ? latitude
