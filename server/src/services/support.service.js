@@ -1,7 +1,5 @@
 import "dotenv/config";
 
-import * as supportRepository from "../repositories/support.repository.js";
-
 
 // ============================================================
 // CONFIGURATION
@@ -361,39 +359,6 @@ const readGoogleResponse = async (
 
   return data;
 };
-
-
-// ============================================================
-// PRISMA DATABASE SERVICES
-// ============================================================
-
-export const getAllSupportServices =
-  async () => {
-    return supportRepository.getAllSupportServices();
-  };
-
-
-export const getSupportServiceById =
-  async (id) => {
-    if (!id) {
-      throw new Error(
-        "Support service ID is required"
-      );
-    }
-
-    const supportService =
-      await supportRepository.getSupportServiceById(
-        id
-      );
-
-    if (!supportService) {
-      throw new Error(
-        "Support service not found"
-      );
-    }
-
-    return supportService;
-  };
 
 
 // ============================================================
