@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
@@ -12,6 +11,7 @@ import MapView, { Marker } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import NearbyEmptyState from "../../src/components/NearbyEmptyState";
+import LoadingCard from "../../src/components/LoadingCard";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import ServiceCard from "../../src/components/ServiceCard";
 import {
@@ -38,16 +38,10 @@ export default function NearbyHelpListScreen() {
 
   useEffect(() => {
     if (!category || locationLoading || !location) {
-      if (locationError) {
-        setLoading(false);
-        setError(locationError);
-      }
       return;
     }
 
     let active = true;
-    setLoading(true);
-    setError(null);
 
     void getNearbyHelpServices(
       location.latitude,
@@ -97,6 +91,7 @@ export default function NearbyHelpListScreen() {
   };
 
   const title = category?.title ?? params.title ?? "Nearby Services";
+  const displayError = error ?? locationError;
 
   if (!category) {
     return (
@@ -116,25 +111,7 @@ export default function NearbyHelpListScreen() {
     );
   }
 
-  if (loading || locationLoading) {
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: COLORS.background }}
-      >
-        <View className="flex-1 px-5">
-          <ScreenHeader title={`${title} Nearby`} />
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text className="mt-4 text-sm text-app-muted">
-              Finding nearby services...
-            </Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
+  if (displayError) {
     return (
       <SafeAreaView
         style={{ flex: 1, backgroundColor: COLORS.background }}
@@ -151,17 +128,40 @@ export default function NearbyHelpListScreen() {
               Unable to load nearby services
             </Text>
             <Text className="mt-2 text-center text-sm leading-5 text-app-muted">
-              {error}
+              {displayError}
             </Text>
             <Pressable
               onPress={() => {
                 setError(null);
+                setLoading(true);
                 void reload();
               }}
               className="mt-5 rounded-full bg-primary px-6 py-3 active:opacity-80"
             >
               <Text className="font-semibold text-white">Try Again</Text>
             </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loading || locationLoading) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+      >
+        <View className="flex-1 px-5">
+          <ScreenHeader title={`${title} Nearby`} />
+          <View className="pt-2">
+            <View className="mb-5 rounded-2xl bg-light-purple px-4 py-3">
+              <Text className="text-xs font-semibold text-primary">
+                Finding trusted services near you...
+              </Text>
+            </View>
+            <LoadingCard />
+            <LoadingCard />
+            <LoadingCard />
           </View>
         </View>
       </SafeAreaView>
@@ -240,10 +240,11 @@ export default function NearbyHelpListScreen() {
           {services.length === 0 ? (
             <NearbyEmptyState />
           ) : (
-            services.map((service) => (
+            services.map((service, index) => (
               <ServiceCard
                 key={service.id}
                 service={service}
+                index={index}
                 onPress={() => openDetails(service)}
               />
             ))

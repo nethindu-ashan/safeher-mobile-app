@@ -4,7 +4,8 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import CategoryCard from "../../src/components/CategoryCard";
-import ScreenHeader from "../../src/components/ScreenHeader";
+import LocationCard from "../../src/components/LocationCard";
+import NearbyHelpHeader from "../../src/components/NearbyHelpHeader";
 import { NEARBY_CATEGORIES } from "../../src/constants/nearbyCategories";
 import { COLORS } from "../../src/constants/theme";
 
@@ -22,38 +23,22 @@ export default function NearbyHelpScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 30 }}
       >
-        <ScreenHeader title="Nearby Help Services" />
+        <NearbyHelpHeader />
 
-        <Text className="mt-1 text-sm leading-5 text-app-muted">
-          Find trusted safety services near your current location.
-        </Text>
+        <LocationCard />
 
-        <View className="mt-5 flex-row items-start rounded-2xl border border-app-border bg-white p-4">
-          <View className="h-11 w-11 items-center justify-center rounded-full bg-light-purple">
-            <Ionicons
-              name="location-outline"
-              size={22}
-              color={COLORS.primary}
-            />
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="font-semibold text-app-text">
-              Location is requested when you choose a service
-            </Text>
-            <Text className="mt-1 text-xs leading-4 text-app-muted">
-              We use your current GPS position to find nearby places.
-            </Text>
-          </View>
-        </View>
-
-        <Text className="mt-7 text-lg font-bold text-app-text">
+        <Text className="mt-7 mb-1 text-lg font-bold text-app-text">
           What help do you need?
         </Text>
+        <Text className="mb-4 text-sm leading-5 text-app-muted">
+          Quick access to trusted services near your current location.
+        </Text>
 
-        <View className="mt-4">
-          {NEARBY_CATEGORIES.map((category) => (
+        <View>
+          {NEARBY_CATEGORIES.map((category, index) => (
             <CategoryCard
               key={category.type}
+              index={index}
               category={category}
               onPress={() =>
                 router.push({
