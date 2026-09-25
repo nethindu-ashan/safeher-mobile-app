@@ -5,13 +5,14 @@ import type {
   CreateIncidentResponse,
 } from "../types/incident";
 
-
-
 export async function getNearbyIncidents(
   latitude: number,
   longitude: number
 ) {
-  if (typeof apiRequest !== "function") {
+  if (
+    typeof apiRequest !==
+    "function"
+  ) {
     throw new Error(
       `getNearbyIncidents: apiRequest is ${typeof apiRequest}`
     );
@@ -22,12 +23,13 @@ export async function getNearbyIncidents(
   );
 }
 
-
-
 export async function getIncidentById(
   id: string
 ) {
-  if (typeof apiRequest !== "function") {
+  if (
+    typeof apiRequest !==
+    "function"
+  ) {
     throw new Error(
       `getIncidentById: apiRequest is ${typeof apiRequest}`
     );
@@ -38,22 +40,25 @@ export async function getIncidentById(
   );
 }
 
-
-
 export async function createIncident(
   payload: CreateIncidentPayload
 ): Promise<CreateIncidentResponse> {
-  if (typeof apiRequest !== "function") {
+  if (
+    typeof apiRequest !==
+    "function"
+  ) {
     throw new Error(
       `createIncident: apiRequest is ${typeof apiRequest}`
     );
   }
 
-  return apiRequest(
+  return apiRequest<CreateIncidentResponse>(
     "/api/incidents",
     {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(
+        payload
+      ),
     }
   );
 }

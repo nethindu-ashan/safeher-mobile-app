@@ -21,7 +21,7 @@ type Role =
   | "ADMIN"
   | null;
 
-export default function TabLayout() {
+export default function AdminLayout() {
   const {
     isAuthenticated,
     loading: authLoading,
@@ -31,9 +31,6 @@ export default function TabLayout() {
   const [role, setRole] =
     useState<Role>(null);
 
-  // IMPORTANT:
-  // Start as TRUE so normal tabs do not
-  // appear before the role is checked.
   const [roleLoading, setRoleLoading] =
     useState(true);
 
@@ -41,7 +38,6 @@ export default function TabLayout() {
     let mounted = true;
 
     async function checkRole() {
-      // Guest users may use normal tabs.
       if (!isAuthenticated) {
         if (mounted) {
           setRole(null);
@@ -66,7 +62,7 @@ export default function TabLayout() {
         }
       } catch (error) {
         console.error(
-          "Unable to check user role:",
+          "Unable to check admin role:",
           error
         );
 
@@ -116,15 +112,14 @@ export default function TabLayout() {
     );
   }
 
-  // Admin must never see
-  // normal USER tabs.
-  if (
-    isAuthenticated &&
-    role === "ADMIN"
-  ) {
+  if (!isAuthenticated) {
     return (
-      <Redirect href="/admin" />
+      <Redirect href="/auth/sign-in" />
     );
+  }
+
+  if (role !== "ADMIN") {
+    return <Redirect href="/" />;
   }
 
   return (
@@ -157,10 +152,11 @@ export default function TabLayout() {
         },
       }}
     >
+      {/* ADMIN DASHBOARD */}
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Dashboard",
 
           tabBarIcon: ({
             color,
@@ -170,8 +166,8 @@ export default function TabLayout() {
             <Ionicons
               name={
                 focused
-                  ? "home"
-                  : "home-outline"
+                  ? "grid"
+                  : "grid-outline"
               }
               size={size}
               color={color}
@@ -180,29 +176,7 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="alerts"
-        options={{
-          title: "Alerts",
-
-          tabBarIcon: ({
-            color,
-            size,
-            focused,
-          }) => (
-            <Ionicons
-              name={
-                focused
-                  ? "notifications"
-                  : "notifications-outline"
-              }
-              size={size}
-              color={color}
-            />
-          ),
-        }}
-      />
-
+      {/* ADMIN REPORTS */}
       <Tabs.Screen
         name="reports"
         options={{
@@ -216,8 +190,8 @@ export default function TabLayout() {
             <Ionicons
               name={
                 focused
-                  ? "document-text"
-                  : "document-text-outline"
+                  ? "documents"
+                  : "documents-outline"
               }
               size={size}
               color={color}
@@ -226,10 +200,11 @@ export default function TabLayout() {
         }}
       />
 
+      {/* ADMIN PROFILE */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: "Admin",
 
           tabBarIcon: ({
             color,
@@ -239,13 +214,22 @@ export default function TabLayout() {
             <Ionicons
               name={
                 focused
-                  ? "person"
-                  : "person-outline"
+                  ? "shield-checkmark"
+                  : "shield-checkmark-outline"
               }
               size={size}
               color={color}
             />
           ),
+        }}
+      />
+
+      {/* Hide report detail page
+          from bottom navigation */}
+      <Tabs.Screen
+        name="report/[id]"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
