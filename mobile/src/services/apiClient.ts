@@ -1,32 +1,58 @@
-import { API_URL } from "../config/api";
+import { supabase } from "../config/supabase";
 
-export async function apiRequest(
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  throw new Error("Missing EXPO_PUBLIC_API_URL");
+}
+
+export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
-) {
-  if (!API_URL) {
-    throw new Error(
-      "EXPO_PUBLIC_API_URL is not configured."
+): Promise<T> {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error(
+      "Unable to read Supabase session:",
+      sessionError.message
     );
   }
 
+  const headers = new Headers(options.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  if (session?.access_token) {
+    headers.set(
+      "Authorization",
+      `Bearer ${session.access_token}`
+    );
+  }
+
+  const url = `${API_URL}${endpoint}`;
+
+  console.log("API request:", url);
   console.log(
-    "API request:",
-    `${API_URL}${endpoint}`
+    "Auth token attached:",
+    Boolean(session?.access_token)
   );
 
-  const response = await fetch(
-    `${API_URL}${endpoint}`,
-    {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-    }
-  );
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
 
-  const data = await response.json();
+  let data: any = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
 
   console.log(
     "API response:",
@@ -41,5 +67,5 @@ export async function apiRequest(
     );
   }
 
-  return data;
+  return data as T;
 }

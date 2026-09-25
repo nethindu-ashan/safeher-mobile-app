@@ -1,25 +1,31 @@
+import { Ionicons } from "@expo/vector-icons";
+
 import { router } from "expo-router";
-import { useState } from "react";
 
 import {
+  ActivityIndicator,
   Alert,
+  Image,
+  Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
 
-import MapView, {
-  Marker,
-} from "react-native-maps";
-
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import AppCard from "../../src/components/AppCard";
-import ErrorState from "../../src/components/ErrorState";
+import {
+  useState,
+} from "react";
+
 import PrimaryButton from "../../src/components/PrimaryButton";
 import ScreenHeader from "../../src/components/ScreenHeader";
+
+import {
+  COLORS,
+} from "../../src/constants/theme";
 
 import {
   useIncidentReport,
@@ -30,286 +36,309 @@ import {
 } from "../../src/services/incidentService";
 
 import {
-  COLORS,
-} from "../../src/constants/theme";
+  uploadIncidentEvidence,
+} from "../../src/services/evidenceService";
 
-export default function ReviewReportScreen() {
+export default function ReviewIncidentScreen() {
   const {
     draft,
   } = useIncidentReport();
 
-  const [loading, setLoading] =
+  const [
+    submitting,
+    setSubmitting,
+  ] =
     useState(false);
 
-  const [error, setError] =
-    useState<string | null>(null);
-
-  const locationAvailable =
-    draft.latitude !== null &&
-    draft.longitude !== null;
-
-  const handleSubmit = async () => {
-    // Validate location
-    if (
-      draft.latitude === null ||
-      draft.longitude === null
-    ) {
-      Alert.alert(
-        "Location Required",
-        "Please select an incident location."
-      );
-
-      return;
-    }
-
-    // Validate category
-    if (!draft.category) {
-      Alert.alert(
-        "Category Required",
-        "Please select an incident category."
-      );
-
-      return;
-    }
-
-    // Validate description
-    if (!draft.description?.trim()) {
-      Alert.alert(
-        "Description Required",
-        "Please enter an incident description."
-      );
-
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Diagnostic check
-      if (typeof createIncident !== "function") {
-        throw new Error(
-          `createIncident is ${typeof createIncident}`
+  const handleSubmit =
+    async () => {
+      if (
+        draft.latitude ===
+          null ||
+        draft.longitude ===
+          null
+      ) {
+        Alert.alert(
+          "Location Required",
+          "Please select an incident location."
         );
+
+        router.push(
+          "/report/select-location"
+        );
+
+        return;
       }
 
-      const payload = {
-        category:
-          draft.category,
+      try {
+        setSubmitting(true);
 
-        description:
-          draft.description.trim(),
+        const evidencePaths =
+          draft.evidence.length >
+          0
+            ? await uploadIncidentEvidence(
+                draft.evidence
+              )
+            : [];
 
-        latitude:
-          draft.latitude,
+        const response =
+          await createIncident({
+            category:
+              draft.category,
+            latitude:
+              draft.latitude,
+            longitude:
+              draft.longitude,
+            dateTime:
+              draft.dateTime,
+            description:
+              draft.description,
+            isAnonymous:
+              draft.isAnonymous,
+            evidencePaths,
+          });
 
-        longitude:
-          draft.longitude,
-
-        dateTime:
-          draft.dateTime,
-
-        isAnonymous:
-          draft.isAnonymous,
-      };
-
-      console.log(
-        "Submitting incident:",
-        payload
-      );
-
-      const response =
-        await createIncident(payload);
-
-      console.log(
-        "Incident response:",
-        response
-      );
-
-      if (!response) {
-        throw new Error(
-          "createIncident returned no response"
+        router.replace({
+          pathname:
+            "/report/success",
+          params: {
+            id:
+              response.data.id,
+            status:
+              response.data.status,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "Report submission error:",
+          error
         );
+
+        Alert.alert(
+          "Submission Failed",
+          error instanceof Error
+            ? error.message
+            : "Unable to submit your report."
+        );
+      } finally {
+        setSubmitting(false);
       }
-
-      // Move to success screen
-      router.replace({
-        pathname: "/report/success",
-
-        params: {
-          id:
-            response?.data?.id ??
-            "",
-
-          status:
-            response?.data?.status ??
-            "Pending Review",
-        },
-      });
-    } catch (err) {
-      console.error(
-        "Submit incident error:",
-        err
-      );
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : String(err);
-
-      setError(message);
-
-      Alert.alert(
-        "Submission Failed",
-        message
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   return (
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor:
+          COLORS.background,
       }}
     >
       <ScrollView
         className="flex-1 px-5"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         contentContainerStyle={{
-          paddingBottom: 30,
+          paddingBottom: 40,
         }}
       >
         <ScreenHeader title="Review Your Report" />
 
-        <Text className="mb-5 text-sm text-app-muted">
-          Please verify the details before submitting.
+        <Text className="mt-2 text-sm leading-5 text-app-muted">
+          Please verify
+          the details before
+          submitting.
         </Text>
 
-        {/* Report details */}
-        <AppCard>
-          <Text className="text-xs font-medium uppercase text-app-muted">
+        <View className="mt-6 rounded-3xl border border-app-border bg-white p-5">
+          <Text className="text-xs font-semibold uppercase text-app-muted">
             Incident Type
           </Text>
 
-          <Text className="mt-1 font-semibold text-app-text">
-            {draft.category || "Not selected"}
+          <Text className="mt-2 text-base font-bold text-app-text">
+            {draft.category}
           </Text>
+        </View>
 
-          <Text className="mt-5 text-xs font-medium uppercase text-app-muted">
+        <View className="mt-4 rounded-3xl border border-app-border bg-white p-5">
+          <Text className="text-xs font-semibold uppercase text-app-muted">
             Description
           </Text>
 
-          <Text className="mt-1 leading-5 text-app-text">
-            {draft.description || "No description"}
+          <Text className="mt-2 text-sm leading-6 text-app-text">
+            {
+              draft.description
+            }
           </Text>
+        </View>
 
-          <Text className="mt-5 text-xs font-medium uppercase text-app-muted">
-            Reporting
+        <View className="mt-4 rounded-3xl border border-app-border bg-white p-5">
+          <View className="flex-row items-center">
+            <Ionicons
+              name="location-outline"
+              size={21}
+              color={
+                COLORS.primary
+              }
+            />
+
+            <Text className="ml-2 text-xs font-semibold uppercase text-app-muted">
+              Incident Location
+            </Text>
+          </View>
+
+          <Text className="mt-3 text-sm font-medium text-app-text">
+            {draft.latitude?.toFixed(
+              6
+            )}
+            ,{" "}
+            {draft.longitude?.toFixed(
+              6
+            )}
           </Text>
+        </View>
 
-          <Text className="mt-1 text-app-text">
+        <View className="mt-4 rounded-3xl border border-app-border bg-white p-5">
+          <View className="flex-row items-center">
+            <Ionicons
+              name={
+                draft.isAnonymous
+                  ? "eye-off-outline"
+                  : "person-outline"
+              }
+              size={21}
+              color={
+                COLORS.primary
+              }
+            />
+
+            <Text className="ml-2 text-xs font-semibold uppercase text-app-muted">
+              Submission
+            </Text>
+          </View>
+
+          <Text className="mt-3 text-sm font-medium text-app-text">
             {draft.isAnonymous
-              ? "Anonymous Report"
-              : "Identified Report"}
+              ? "Anonymous report"
+              : "Report with profile"}
           </Text>
+        </View>
 
-          <Text className="mt-5 text-xs font-medium uppercase text-app-muted">
-            Incident Time
+        <View className="mt-4 rounded-3xl border border-app-border bg-white p-5">
+          <View className="flex-row items-center">
+            <Ionicons
+              name="images-outline"
+              size={21}
+              color={
+                COLORS.primary
+              }
+            />
+
+            <Text className="ml-2 text-xs font-semibold uppercase text-app-muted">
+              Incident Evidence
+            </Text>
+          </View>
+
+          {draft.evidence
+            .length === 0 ? (
+            <Text className="mt-3 text-sm text-app-muted">
+              No evidence
+              photos attached.
+            </Text>
+          ) : (
+            <>
+              <Text className="mt-3 text-sm text-app-muted">
+                {
+                  draft
+                    .evidence
+                    .length
+                }{" "}
+                {draft.evidence
+                  .length === 1
+                  ? "photo"
+                  : "photos"}{" "}
+                attached
+              </Text>
+
+              <View className="mt-4 flex-row flex-wrap gap-3">
+                {draft.evidence.map(
+                  (
+                    item,
+                    index
+                  ) => (
+                    <Image
+                      key={`${item.uri}-${index}`}
+                      source={{
+                        uri:
+                          item.uri,
+                      }}
+                      style={{
+                        width: 88,
+                        height: 88,
+                        borderRadius:
+                          14,
+                      }}
+                    />
+                  )
+                )}
+              </View>
+            </>
+          )}
+        </View>
+
+        <View className="mt-4 flex-row rounded-3xl bg-light-purple p-4">
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={22}
+            color={
+              COLORS.primary
+            }
+          />
+
+          <Text className="ml-3 flex-1 text-xs leading-5 text-app-muted">
+            Your report will
+            be submitted for
+            review. Evidence
+            files are stored
+            privately and are
+            not included in
+            the public nearby
+            incident feed.
           </Text>
+        </View>
 
-          <Text className="mt-1 text-app-text">
-            {draft.dateTime
-              ? new Date(
-                  draft.dateTime
-                ).toLocaleString()
-              : "Not available"}
-          </Text>
-        </AppCard>
-
-        {/* Location preview */}
-        {locationAvailable && (
-          <View className="mb-5 overflow-hidden rounded-2xl border border-app-border bg-white">
-            <MapView
-              style={{
-                height: 180,
-              }}
-              initialRegion={{
-                latitude:
-                  draft.latitude as number,
-
-                longitude:
-                  draft.longitude as number,
-
-                latitudeDelta:
-                  0.01,
-
-                longitudeDelta:
-                  0.01,
-              }}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              rotateEnabled={false}
-              pitchEnabled={false}
-            >
-              <Marker
-                coordinate={{
-                  latitude:
-                    draft.latitude as number,
-
-                  longitude:
-                    draft.longitude as number,
-                }}
-                pinColor={COLORS.pink}
-                title="Incident Location"
+        <View className="mt-8">
+          {submitting ? (
+            <View className="h-14 items-center justify-center rounded-2xl bg-primary">
+              <ActivityIndicator
+                color="#FFFFFF"
               />
-            </MapView>
 
-            <View className="p-4">
-              <Text className="font-semibold text-app-text">
-                Selected Location
-              </Text>
-
-              <Text className="mt-1 text-sm text-app-muted">
-                Latitude:{" "}
-                {draft.latitude?.toFixed(6)}
-              </Text>
-
-              <Text className="mt-1 text-sm text-app-muted">
-                Longitude:{" "}
-                {draft.longitude?.toFixed(6)}
+              <Text className="mt-1 text-xs font-medium text-white">
+                Submitting...
               </Text>
             </View>
-          </View>
-        )}
+          ) : (
+            <PrimaryButton
+              title="Submit Report"
+              onPress={
+                handleSubmit
+              }
+            />
+          )}
+        </View>
 
-        {/* Error message */}
-        {error && (
-          <ErrorState
-            message={error}
-          />
-        )}
-
-        {/* Submit button */}
-        <PrimaryButton
-          title={
-            loading
-              ? "Submitting..."
-              : "Submit Report"
+        <Pressable
+          disabled={submitting}
+          onPress={() =>
+            router.back()
           }
-          disabled={loading}
-          onPress={handleSubmit}
-        />
-
-        {/* Edit report */}
-        <Text
-          onPress={() => router.back()}
-          className="mt-5 text-center font-medium text-app-muted"
+          className="mt-4 items-center py-3"
         >
-          Edit Report
-        </Text>
+          <Text className="font-semibold text-primary">
+            Edit Report
+          </Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

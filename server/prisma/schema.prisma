@@ -17,6 +17,12 @@ model Incident {
   status           String   @default("Pending Review") @db.VarChar(50)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  evidencePaths String[] @default([]) @map("evidence_paths")
+
+  userId String? @map("user_id") @db.Uuid
+  user   UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
   @@map("incidents")
 }
 
@@ -41,4 +47,23 @@ model NotificationPreference {
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("notification_preferences")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model UserProfile {
+  id        String   @id @db.Uuid
+  fullName  String   @map("full_name")
+  email     String   @unique
+  phone     String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incidents Incident[]
+
+  @@map("user_profiles")
 }
