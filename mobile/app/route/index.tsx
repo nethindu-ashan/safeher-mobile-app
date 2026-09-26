@@ -51,6 +51,13 @@ export default function RouteScreen() {
       null
     );
 
+  // Destination selected by tapping the map.
+  const [selectedDestination, setSelectedDestination] =
+    useState<{
+      latitude: number;
+      longitude: number;
+    } | null>(null);
+
   // Loading state while getting location.
   const [isGettingLocation, setIsGettingLocation] =
     useState(true);
@@ -206,8 +213,15 @@ export default function RouteScreen() {
         startLongitude:
           currentLocation.coords.longitude,
 
-        destination:
-          destinationValue,
+        destination: destinationValue,
+
+        ...(selectedDestination && {
+          destinationLatitude:
+            selectedDestination.latitude,
+
+          destinationLongitude:
+            selectedDestination.longitude,
+        }),
       });
 
       const availableRoutes =
@@ -342,46 +356,50 @@ export default function RouteScreen() {
         ====================================== */}
 
         {/* Header with Back Button */}
-<View className="absolute left-0 right-0 top-0 z-20 px-5">
-  <ScreenHeader title="Safe Route" />
-</View>
+        <View className="absolute left-0 right-0 top-0 z-20 px-5">
+          <ScreenHeader title="Safe Route" />
+        </View>
 
-{/* Full Screen Map */}
-<View className="absolute inset-0">
-  <MapView
-    style={{
-      width: "100%",
-      height: "100%",
-    }}
-    // ...
-  />
-</View>
+        {/* Full Screen Map */}
+        <View className="absolute inset-0">
+          <MapView
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+            // ...
+          />
+        </View>
 
-{/* Floating Destination Search */}
-<View className="absolute left-0 right-0 top-20 z-10 px-5">
-  <View className="flex-row items-center">
+        {/* Floating Destination Search */}
+        <View className="absolute left-0 right-0 top-20 z-10 px-5">
+          <View className="flex-row items-center">
 
-    <TextInput
-      className="flex-1 rounded-full border border-app-border bg-white px-5 py-3 text-base text-app-text"
-      placeholder="Enter destination"
-      placeholderTextColor="#8A8192"
-      value={destination}
-      onChangeText={setDestination}
-      autoCapitalize="words"
-      returnKeyType="search"
-      onSubmitEditing={handleSearchRoutes}
-    />
+            <TextInput
+              className="flex-1 rounded-full border border-app-border bg-white px-5 py-3 text-base text-app-text"
+              placeholder="Enter destination"
+              placeholderTextColor="#8A8192"
+              value={destination}
+              onChangeText={(text) => {
+                setDestination(text);
+                setSelectedDestination(null);
+              }}
+              autoCapitalize="words"
+              returnKeyType="search"
+              onSubmitEditing={handleSearchRoutes}
+            />
 
-    <Pressable
-      onPress={handleSearchRoutes}
-      disabled={isLoading || isGettingLocation}
-      className="ml-2 h-11 w-11 items-center justify-center rounded-full bg-primary"
-    >
-      <Text className="text-lg text-white">🔍</Text>
-    </Pressable>
+            <Pressable
+              onPress={handleSearchRoutes}
+              disabled={isLoading || isGettingLocation}
+              className="ml-2 h-11 w-11 items-center justify-center rounded-full bg-primary"
+            >
+              <Text className="text-lg text-white">🔍</Text>
+            </Pressable>
 
-  </View>
-</View>
+          </View>
+        </View>
+        
         {/* =====================================
             MAP
         ====================================== */}
@@ -392,8 +410,55 @@ export default function RouteScreen() {
               width: "100%",
               height: "100%",
             }}
-            onPress={() => {
+            onPress={async (event) => {
               Keyboard.dismiss();
+
+              const {
+                latitude,
+                longitude,
+              } = event.nativeEvent.coordinate;
+
+              const coordinates = {
+                latitude,
+                longitude,
+              };
+
+              // Show selected destination marker.
+              setSelectedDestination(coordinates);
+
+              try {
+                // Convert coordinates into a readable place name.
+                const addresses =
+                  await Location.reverseGeocodeAsync(
+                    coordinates
+                  );
+
+                if (addresses.length > 0) {
+                  const address = addresses[0];
+
+                  const placeName =
+                    address.name ||
+                    address.street ||
+                    address.city ||
+                    address.region ||
+                    `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+                  setDestination(placeName);
+                } else {
+                  setDestination(
+                    `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  "Reverse geocoding error:",
+                  error
+                );
+
+                setDestination(
+                  `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+                );
+              }
             }}
             showsUserLocation={
               !!currentLocation
@@ -426,6 +491,15 @@ export default function RouteScreen() {
                 title="Current Location"
               />
             )}
+
+            {selectedDestination && (
+              <Marker
+                coordinate={selectedDestination}
+                title="Selected Destination"
+                description={destination}
+              />
+            )}
+
           </MapView>
         </View>
 
