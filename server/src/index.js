@@ -10,6 +10,8 @@ import routeSafetyRoutes from "./routes/routeSafety.routes.js";
 import notificationPreferenceRoutes from "./routes/notificationPreference.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import trustedContactRoutes from "./routes/trustedContact.routes.js";
+import adminSosRoutes from "./routes/adminSos.routes.js";
 
 const app = express();
 
@@ -37,7 +39,11 @@ app.use("/api/notification-preferences", notificationPreferenceRoutes);
 
 app.use("/api/users", userRoutes);
 
+app.use("/api/admin/sos", adminSosRoutes);
+
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/trusted-contacts", trustedContactRoutes);
 
 const PORT = process.env.PORT || 5001;
 

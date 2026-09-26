@@ -15,16 +15,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { COLORS, GRADIENTS } from "../../src/constants/theme";
+import {
+  COLORS,
+  GRADIENTS,
+} from "../../src/constants/theme";
+
 import { signIn } from "../../src/services/authService";
 import { getMyProfile } from "../../src/services/userService";
 
 export default function SignInScreen() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] =
+    useState("");
+  const [showPassword, setShowPassword] =
+    useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -36,9 +42,12 @@ export default function SignInScreen() {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!emailRegex.test(email.trim())) {
+    if (
+      !emailRegex.test(email.trim())
+    ) {
       Alert.alert(
         "Invalid email",
         "Please enter a valid email address."
@@ -70,16 +79,28 @@ export default function SignInScreen() {
         password,
       });
 
-      if (!data.session || !data.user) {
+      if (
+        !data.session ||
+        !data.user
+      ) {
         throw new Error(
           "Unable to create a login session."
         );
       }
 
-      // Creates or retrieves the Prisma user profile.
-      await getMyProfile();
+      // Retrieve the SafeHer profile
+      // and check the application role.
+      const profileResponse =
+        await getMyProfile();
 
-      router.replace("/");
+      const role =
+        profileResponse.data.role;
+
+      if (role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/");
+      }
     } catch (error) {
       let message =
         error instanceof Error
@@ -89,7 +110,9 @@ export default function SignInScreen() {
       if (
         message
           .toLowerCase()
-          .includes("email not confirmed")
+          .includes(
+            "email not confirmed"
+          )
       ) {
         message =
           "Please verify your email address before signing in.";
@@ -98,7 +121,9 @@ export default function SignInScreen() {
       if (
         message
           .toLowerCase()
-          .includes("invalid login credentials")
+          .includes(
+            "invalid login credentials"
+          )
       ) {
         message =
           "Incorrect email address or password.";
@@ -131,12 +156,16 @@ export default function SignInScreen() {
             paddingBottom: 40,
           }}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-          {/* Back Button */}
+          {/* Back */}
           <View className="pt-3">
             <Pressable
-              onPress={() => router.back()}
+              onPress={() =>
+                router.back()
+              }
               className="h-11 w-11 items-center justify-center rounded-full bg-white"
             >
               <Ionicons
@@ -150,15 +179,25 @@ export default function SignInScreen() {
           {/* Header */}
           <View className="mt-12">
             <LinearGradient
-              colors={GRADIENTS.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+              colors={
+                GRADIENTS.primary
+              }
+              start={{
+                x: 0,
+                y: 0,
+              }}
+              end={{
+                x: 1,
+                y: 1,
+              }}
               style={{
                 width: 64,
                 height: 64,
                 borderRadius: 20,
-                alignItems: "center",
-                justifyContent: "center",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
               }}
             >
               <Ionicons
@@ -173,8 +212,9 @@ export default function SignInScreen() {
             </Text>
 
             <Text className="mt-2 text-base leading-6 text-app-muted">
-              Sign in to manage your SafeHer profile,
-              trusted contacts and personal safety settings.
+              Sign in to access your
+              SafeHer account and safety
+              features.
             </Text>
           </View>
 
@@ -190,12 +230,16 @@ export default function SignInScreen() {
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color={COLORS.textSecondary}
+                  color={
+                    COLORS.textSecondary
+                  }
                 />
 
                 <TextInput
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={
+                    setEmail
+                  }
                   placeholder="name@example.com"
                   placeholderTextColor={
                     COLORS.textSecondary
@@ -218,17 +262,23 @@ export default function SignInScreen() {
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color={COLORS.textSecondary}
+                  color={
+                    COLORS.textSecondary
+                  }
                 />
 
                 <TextInput
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={
+                    setPassword
+                  }
                   placeholder="Enter your password"
                   placeholderTextColor={
                     COLORS.textSecondary
                   }
-                  secureTextEntry={!showPassword}
+                  secureTextEntry={
+                    !showPassword
+                  }
                   autoCapitalize="none"
                   autoCorrect={false}
                   className="ml-3 flex-1 py-4 text-base text-app-text"
@@ -237,7 +287,8 @@ export default function SignInScreen() {
                 <Pressable
                   onPress={() =>
                     setShowPassword(
-                      (current) => !current
+                      (current) =>
+                        !current
                     )
                   }
                 >
@@ -248,13 +299,14 @@ export default function SignInScreen() {
                         : "eye-outline"
                     }
                     size={21}
-                    color={COLORS.textSecondary}
+                    color={
+                      COLORS.textSecondary
+                    }
                   />
                 </Pressable>
               </View>
             </View>
 
-            {/* Forgot Password */}
             <Pressable
               onPress={() =>
                 router.push(
@@ -276,18 +328,30 @@ export default function SignInScreen() {
             className="mt-8 overflow-hidden rounded-2xl"
           >
             <LinearGradient
-              colors={GRADIENTS.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+              colors={
+                GRADIENTS.primary
+              }
+              start={{
+                x: 0,
+                y: 0,
+              }}
+              end={{
+                x: 1,
+                y: 0,
+              }}
               style={{
                 minHeight: 56,
-                alignItems: "center",
-                justifyContent: "center",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
                 borderRadius: 16,
               }}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator
+                  color="#FFFFFF"
+                />
               ) : (
                 <Text className="text-base font-bold text-white">
                   Sign In
@@ -299,11 +363,16 @@ export default function SignInScreen() {
           {/* Create Account */}
           <View className="mt-7 flex-row justify-center">
             <Text className="text-sm text-app-muted">
-  {"Don't have an account? "}
-</Text>
+              {
+                "Don't have an account? "
+              }
+            </Text>
+
             <Pressable
               onPress={() =>
-                router.push("/auth/sign-up")
+                router.push(
+                  "/auth/sign-up"
+                )
               }
             >
               <Text className="text-sm font-bold text-primary">
