@@ -8,6 +8,8 @@ export type RouteSearchRequest = {
   startLatitude?: number;
   startLongitude?: number;
   destination: string;
+  destinationLatitude?: number;
+  destinationLongitude?: number;
 };
 
 /*
