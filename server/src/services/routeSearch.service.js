@@ -70,7 +70,9 @@ const searchRoutes = async (
   startLocation,
   startLatitude,
   startLongitude,
-  destination
+  destination,
+  destinationLatitude,
+  destinationLongitude
 ) => {
 
   /*
@@ -124,6 +126,38 @@ const searchRoutes = async (
     };
   }
 
+  /*
+  Build the Google Routes API destination.
+
+  If map coordinates are available,
+  use the exact selected location.
+
+  Otherwise use the typed address.
+  */
+  let destinationPoint;
+
+  if (
+    destinationLatitude !== null &&
+    destinationLatitude !== undefined &&
+    destinationLongitude !== null &&
+    destinationLongitude !== undefined
+  ) {
+
+    destinationPoint = {
+      location: {
+        latLng: {
+          latitude: destinationLatitude,
+          longitude: destinationLongitude,
+        },
+      },
+    };
+
+  } else {
+
+    destinationPoint = {
+      address: destination,
+    };
+  }
 
   /*
     Send request to Google Routes API.
@@ -159,9 +193,7 @@ const searchRoutes = async (
         /*
           Destination remains a text address.
         */
-        destination: {
-          address: destination,
-        },
+        destination: destinationPoint,
 
         travelMode: "DRIVE",
 
@@ -241,8 +273,10 @@ const searchRoutes = async (
             startLocation ||
             "Current Location",
 
-          destination,
-
+          destination:
+            destination ||
+            `${destinationLatitude}, ${destinationLongitude}`,
+            
           distanceMeters:
             route.distanceMeters,
 
