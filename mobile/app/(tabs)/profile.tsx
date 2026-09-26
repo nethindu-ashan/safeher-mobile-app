@@ -25,9 +25,14 @@ export default function ProfileScreen() {
   } = useAuth();
 
   const [profile, setProfile] =
-    useState<UserProfile | null>(null);
+    useState<UserProfile | null>(
+      null
+    );
 
-  const [profileLoading, setProfileLoading] =
+  const [
+    profileLoading,
+    setProfileLoading,
+  ] =
     useState(false);
 
   useEffect(() => {
@@ -37,117 +42,154 @@ export default function ProfileScreen() {
     }
 
     loadProfile();
-  }, [isAuthenticated, user?.id]);
+  }, [
+    isAuthenticated,
+    user?.id,
+  ]);
 
-  const loadProfile = async () => {
-    try {
-      setProfileLoading(true);
+  const loadProfile =
+    async () => {
+      try {
+        setProfileLoading(
+          true
+        );
 
-      const response =
-        await getMyProfile();
+        const response =
+          await getMyProfile();
 
-      setProfile(response.data);
-    } catch (error) {
-      console.error(
-        "Profile loading error:",
-        error
+        setProfile(
+          response.data
+        );
+      } catch (error) {
+        console.error(
+          "Profile loading error:",
+          error
+        );
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to load your profile.";
+
+        Alert.alert(
+          "Profile error",
+          message
+        );
+      } finally {
+        setProfileLoading(
+          false
+        );
+      }
+    };
+
+  const handleTrustedContacts =
+    () => {
+      if (
+        !isAuthenticated
+      ) {
+        Alert.alert(
+          "Sign in required",
+          "Please sign in to manage your trusted contacts.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Sign In",
+              onPress: () =>
+                router.push(
+                  "/auth/sign-in"
+                ),
+            },
+          ]
+        );
+
+        return;
+      }
+
+      router.push(
+        "/trusted-contacts"
       );
+    };
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to load your profile.";
+  const handleNotificationPreferences =
+    () => {
+      if (
+        !isAuthenticated
+      ) {
+        Alert.alert(
+          "Sign in required",
+          "Please sign in to manage your notification preferences.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Sign In",
+              onPress: () =>
+                router.push(
+                  "/auth/sign-in"
+                ),
+            },
+          ]
+        );
 
-      Alert.alert(
-        "Profile error",
-        message
+        return;
+      }
+
+      router.push(
+        "/settings/notifications"
       );
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+    };
 
-  const handleNotificationPreferences = () => {
-    if (!isAuthenticated) {
+  const handleLogout =
+    () => {
       Alert.alert(
-        "Sign in required",
-        "Please sign in to manage your notification preferences.",
+        "Sign out",
+        "Are you sure you want to sign out of SafeHer?",
         [
           {
             text: "Cancel",
             style: "cancel",
           },
           {
-            text: "Sign In",
-            onPress: () =>
-              router.push("/auth/sign-in"),
+            text: "Sign Out",
+            style:
+              "destructive",
+            onPress:
+              async () => {
+                try {
+                  await signOut();
+
+                  setProfile(
+                    null
+                  );
+
+                  Alert.alert(
+                    "Signed out",
+                    "You have been signed out successfully."
+                  );
+                } catch (
+                  error
+                ) {
+                  const message =
+                    error instanceof
+                    Error
+                      ? error.message
+                      : "Unable to sign out.";
+
+                  Alert.alert(
+                    "Sign out failed",
+                    message
+                  );
+                }
+              },
           },
         ]
       );
-
-      return;
-    }
-
-    router.push(
-      "/settings/notifications"
-    );
-  };
-
-  const handleAdminPanel = () => {
-    if (
-      !isAuthenticated ||
-      profile?.role !== "ADMIN"
-    ) {
-      Alert.alert(
-        "Access denied",
-        "Administrator access is required."
-      );
-
-      return;
-    }
-
-    router.push("/admin");
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      "Sign out",
-      "Are you sure you want to sign out of SafeHer?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign Out",
-          style: "destructive",
-
-          onPress: async () => {
-            try {
-              await signOut();
-
-              setProfile(null);
-
-              Alert.alert(
-                "Signed out",
-                "You have been signed out successfully."
-              );
-            } catch (error) {
-              const message =
-                error instanceof Error
-                  ? error.message
-                  : "Unable to sign out.";
-
-              Alert.alert(
-                "Sign out failed",
-                message
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
+    };
 
   if (authLoading) {
     return (
@@ -161,7 +203,9 @@ export default function ProfileScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator
             size="large"
-            color={COLORS.primary}
+            color={
+              COLORS.primary
+            }
           />
 
           <Text className="mt-3 text-sm text-app-muted">
@@ -195,10 +239,6 @@ export default function ProfileScreen() {
           Profile
         </Text>
 
-        {/* ============================== */}
-        {/* GUEST USER */}
-        {/* ============================== */}
-
         {!isAuthenticated && (
           <>
             <View className="mt-8 items-center">
@@ -206,7 +246,9 @@ export default function ProfileScreen() {
                 <Ionicons
                   name="person-outline"
                   size={34}
-                  color={COLORS.primary}
+                  color={
+                    COLORS.primary
+                  }
                 />
               </View>
 
@@ -215,11 +257,7 @@ export default function ProfileScreen() {
               </Text>
 
               <Text className="mt-2 px-6 text-center text-sm leading-5 text-app-muted">
-                Sign in or create an
-                account to manage your
-                profile, notification
-                preferences and other
-                personal safety settings.
+                Sign in or create an account to manage your profile, trusted contacts, notification preferences and other personal safety settings.
               </Text>
             </View>
 
@@ -253,43 +291,37 @@ export default function ProfileScreen() {
               <Ionicons
                 name="shield-checkmark-outline"
                 size={22}
-                color={COLORS.primary}
+                color={
+                  COLORS.primary
+                }
               />
 
               <Text className="ml-3 flex-1 text-sm leading-5 text-app-muted">
-                Critical SafeHer safety
-                features can still be used
-                without creating an
-                account.
+                Critical SafeHer safety features can still be used without creating an account.
               </Text>
             </View>
           </>
         )}
-
-        {/* ============================== */}
-        {/* AUTHENTICATED USER */}
-        {/* ============================== */}
 
         {isAuthenticated && (
           <>
             <View className="mt-8 items-center">
               <View className="h-20 w-20 items-center justify-center rounded-full bg-light-purple">
                 <Ionicons
-                  name={
-                    profile?.role ===
-                    "ADMIN"
-                      ? "shield-checkmark-outline"
-                      : "person-outline"
-                  }
+                  name="person-outline"
                   size={34}
-                  color={COLORS.primary}
+                  color={
+                    COLORS.primary
+                  }
                 />
               </View>
 
               {profileLoading ? (
                 <ActivityIndicator
                   className="mt-4"
-                  color={COLORS.primary}
+                  color={
+                    COLORS.primary
+                  }
                 />
               ) : (
                 <>
@@ -302,33 +334,23 @@ export default function ProfileScreen() {
                     {profile?.email ??
                       user?.email}
                   </Text>
-
-                  {profile?.role ===
-                    "ADMIN" && (
-                    <View className="mt-3 rounded-full bg-light-purple px-4 py-2">
-                      <Text className="text-xs font-bold text-primary">
-                        SafeHer
-                        Administrator
-                      </Text>
-                    </View>
-                  )}
                 </>
               )}
             </View>
 
-            {/* Account Information */}
             <View className="mt-8 rounded-2xl border border-app-border bg-white p-4">
               <Text className="mb-4 text-base font-bold text-app-text">
                 Account Information
               </Text>
 
-              {/* Email */}
               <View className="flex-row items-center py-2">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-light-purple">
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color={COLORS.primary}
+                    color={
+                      COLORS.primary
+                    }
                   />
                 </View>
 
@@ -345,13 +367,14 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Phone */}
               <View className="mt-2 flex-row items-center py-2">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-light-purple">
                   <Ionicons
                     name="call-outline"
                     size={20}
-                    color={COLORS.primary}
+                    color={
+                      COLORS.primary
+                    }
                   />
                 </View>
 
@@ -367,13 +390,14 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Role */}
               <View className="mt-2 flex-row items-center py-2">
                 <View className="h-10 w-10 items-center justify-center rounded-full bg-light-purple">
                   <Ionicons
                     name="shield-outline"
                     size={20}
-                    color={COLORS.primary}
+                    color={
+                      COLORS.primary
+                    }
                   />
                 </View>
 
@@ -391,88 +415,49 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </View>
-
-            {/* ============================== */}
-            {/* ADMINISTRATION */}
-            {/* Only visible to ADMIN */}
-            {/* ============================== */}
-
-            {profile?.role ===
-              "ADMIN" && (
-              <View className="mt-8">
-                <Text className="mb-3 text-base font-bold text-app-text">
-                  Administration
-                </Text>
-
-                <Pressable
-                  onPress={
-                    handleAdminPanel
-                  }
-                  className="rounded-3xl border border-app-border bg-white p-5 active:opacity-70"
-                >
-                  <View className="flex-row items-center">
-                    <View className="h-12 w-12 items-center justify-center rounded-2xl bg-light-purple">
-                      <Ionicons
-                        name="shield-checkmark-outline"
-                        size={24}
-                        color={
-                          COLORS.primary
-                        }
-                      />
-                    </View>
-
-                    <View className="ml-4 flex-1">
-                      <Text className="text-base font-bold text-app-text">
-                        Admin Panel
-                      </Text>
-
-                      <Text className="mt-1 text-sm leading-5 text-app-muted">
-                        Review and manage
-                        submitted incident
-                        reports
-                      </Text>
-                    </View>
-
-                    <Ionicons
-                      name="chevron-forward"
-                      size={20}
-                      color="#A995B5"
-                    />
-                  </View>
-
-                  <View className="mt-4 flex-row items-center rounded-2xl bg-light-purple px-4 py-3">
-                    <Ionicons
-                      name="clipboard-outline"
-                      size={18}
-                      color={
-                        COLORS.primary
-                      }
-                    />
-
-                    <Text className="ml-2 flex-1 text-xs font-medium text-app-muted">
-                      Review Pending,
-                      Verified and Rejected
-                      safety reports
-                    </Text>
-                  </View>
-                </Pressable>
-              </View>
-            )}
           </>
         )}
 
-        {/* ============================== */}
-        {/* SETTINGS */}
-        {/* ============================== */}
-
         <View className="mt-10">
           <Text className="mb-3 text-base font-bold text-app-text">
-            Settings
+            Safety Settings
           </Text>
 
-          {/* Notification Preferences */}
           <Pressable
             className="flex-row items-center rounded-2xl border border-app-border bg-white px-4 py-4 active:opacity-70"
+            onPress={
+              handleTrustedContacts
+            }
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-light-purple">
+              <Ionicons
+                name="people-outline"
+                size={21}
+                color={
+                  COLORS.primary
+                }
+              />
+            </View>
+
+            <View className="ml-3 flex-1">
+              <Text className="text-base font-semibold text-app-text">
+                Trusted Contacts
+              </Text>
+
+              <Text className="mt-1 text-sm text-app-muted">
+                Manage emergency contacts
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#A995B5"
+            />
+          </Pressable>
+
+          <Pressable
+            className="mt-3 flex-row items-center rounded-2xl border border-app-border bg-white px-4 py-4 active:opacity-70"
             onPress={
               handleNotificationPreferences
             }
@@ -481,19 +466,19 @@ export default function ProfileScreen() {
               <Ionicons
                 name="notifications-outline"
                 size={21}
-                color={COLORS.primary}
+                color={
+                  COLORS.primary
+                }
               />
             </View>
 
             <View className="ml-3 flex-1">
               <Text className="text-base font-semibold text-app-text">
-                Notification
-                Preferences
+                Notification Preferences
               </Text>
 
               <Text className="mt-1 text-sm text-app-muted">
-                Manage your safety
-                notifications
+                Manage your safety notifications
               </Text>
             </View>
 
@@ -505,25 +490,26 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* ============================== */}
-        {/* LOGOUT */}
-        {/* ============================== */}
-
         {isAuthenticated && (
           <Pressable
-            onPress={handleLogout}
+            onPress={
+              handleLogout
+            }
             className="mt-6 flex-row items-center justify-center rounded-2xl border border-red-200 bg-white py-4 active:opacity-70"
           >
             <Ionicons
               name="log-out-outline"
               size={21}
-              color={COLORS.error}
+              color={
+                COLORS.error
+              }
             />
 
             <Text
               className="ml-2 text-base font-bold"
               style={{
-                color: COLORS.error,
+                color:
+                  COLORS.error,
               }}
             >
               Sign Out

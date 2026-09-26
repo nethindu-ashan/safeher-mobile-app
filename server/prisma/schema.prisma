@@ -6,6 +6,26 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model UserProfile {
+  id        String   @id @db.Uuid
+  fullName  String   @map("full_name")
+  email     String   @unique
+  phone     String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incidents       Incident[]
+  trustedContacts TrustedContact[]
+
+  @@map("user_profiles")
+}
+
 model Incident {
   id               String   @id @default(uuid()) @db.Uuid
   category         String   @db.VarChar(100)
@@ -19,11 +39,27 @@ model Incident {
 
   evidencePaths String[] @default([]) @map("evidence_paths")
 
-  userId String? @map("user_id") @db.Uuid
+  userId String?      @map("user_id") @db.Uuid
   user   UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("incidents")
+}
+
+model TrustedContact {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  name         String   @db.VarChar(100)
+  phone        String   @db.VarChar(30)
+  relationship String?  @db.VarChar(50)
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trusted_contacts")
 }
 
 model EmergencySOS {
@@ -47,23 +83,4 @@ model NotificationPreference {
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("notification_preferences")
-}
-
-enum UserRole {
-  USER
-  ADMIN
-}
-
-model UserProfile {
-  id        String   @id @db.Uuid
-  fullName  String   @map("full_name")
-  email     String   @unique
-  phone     String?
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  incidents Incident[]
-
-  @@map("user_profiles")
 }

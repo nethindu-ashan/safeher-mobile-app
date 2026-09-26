@@ -3,13 +3,11 @@ import {
   router,
   useFocusEffect,
 } from "expo-router";
-
 import {
   ComponentProps,
   useCallback,
   useState,
 } from "react";
-
 import {
   ActivityIndicator,
   Pressable,
@@ -17,7 +15,6 @@ import {
   Text,
   View,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { COLORS } from "../../src/constants/theme";
@@ -27,6 +24,11 @@ import {
   IncidentStatus,
   getAdminIncidents,
 } from "../../src/services/adminService";
+
+import {
+  AdminSOS,
+  getAdminSOSRecords,
+} from "../../src/services/adminSosService";
 
 type IconName =
   ComponentProps<
@@ -87,6 +89,9 @@ export default function AdminDashboardScreen() {
   const [incidents, setIncidents] =
     useState<AdminIncident[]>([]);
 
+  const [sosRecords, setSOSRecords] =
+    useState<AdminSOS[]>([]);
+
   const [loading, setLoading] =
     useState(true);
 
@@ -99,12 +104,27 @@ export default function AdminDashboardScreen() {
         setLoading(true);
         setError(null);
 
-        const response =
-          await getAdminIncidents();
+        const [
+          incidentResponse,
+          sosResponse,
+        ] = await Promise.all([
+          getAdminIncidents(),
+          getAdminSOSRecords(),
+        ]);
 
         setIncidents(
-          Array.isArray(response.data)
-            ? response.data
+          Array.isArray(
+            incidentResponse.data
+          )
+            ? incidentResponse.data
+            : []
+        );
+
+        setSOSRecords(
+          Array.isArray(
+            sosResponse.data
+          )
+            ? sosResponse.data
             : []
         );
       } catch (error) {
@@ -139,19 +159,34 @@ export default function AdminDashboardScreen() {
   const verifiedCount =
     incidents.filter(
       (item) =>
-        item.status === "Verified"
+        item.status ===
+        "Verified"
     ).length;
 
   const rejectedCount =
     incidents.filter(
       (item) =>
-        item.status === "Rejected"
+        item.status ===
+        "Rejected"
     ).length;
 
   const cancelledCount =
     incidents.filter(
       (item) =>
-        item.status === "Cancelled"
+        item.status ===
+        "Cancelled"
+    ).length;
+
+  const activeSOSCount =
+    sosRecords.filter(
+      (item) =>
+        item.status === "ACTIVE"
+    ).length;
+
+  const cancelledSOSCount =
+    sosRecords.filter(
+      (item) =>
+        item.status === "CANCELLED"
     ).length;
 
   const openReports = (
@@ -169,7 +204,30 @@ export default function AdminDashboardScreen() {
       return;
     }
 
-    router.push("/admin/reports");
+    router.push(
+      "/admin/reports"
+    );
+  };
+
+  const openSOS = (
+    status?:
+      | "ACTIVE"
+      | "CANCELLED"
+  ) => {
+    if (status) {
+      router.push({
+        pathname: "/admin/sos",
+        params: {
+          status,
+        },
+      });
+
+      return;
+    }
+
+    router.push(
+      "/admin/sos"
+    );
   };
 
   return (
@@ -190,19 +248,16 @@ export default function AdminDashboardScreen() {
           false
         }
       >
-        {/* Header */}
         <View className="mt-2">
           <Text className="text-2xl font-bold text-app-text">
             Admin Dashboard
           </Text>
 
           <Text className="mt-1 text-sm text-app-muted">
-            SafeHer incident report
-            management
+            SafeHer safety management
           </Text>
         </View>
 
-        {/* Welcome */}
         <View className="mt-6 rounded-3xl bg-light-purple p-5">
           <View className="flex-row items-center">
             <View className="h-14 w-14 items-center justify-center rounded-2xl bg-white">
@@ -217,14 +272,11 @@ export default function AdminDashboardScreen() {
 
             <View className="ml-4 flex-1">
               <Text className="text-lg font-bold text-app-text">
-                Safety Report Review
+                Safety Administration
               </Text>
 
               <Text className="mt-1 text-sm leading-5 text-app-muted">
-                Review incident
-                submissions and manage
-                their verification
-                status.
+                Review incident reports and monitor emergency SOS events.
               </Text>
             </View>
           </View>
@@ -262,7 +314,7 @@ export default function AdminDashboardScreen() {
             />
 
             <Text className="mt-3 text-app-muted">
-              Loading reports...
+              Loading dashboard...
             </Text>
           </View>
         ) : error ? (
@@ -276,7 +328,7 @@ export default function AdminDashboardScreen() {
             />
 
             <Text className="mt-4 text-lg font-bold text-app-text">
-              Unable to load reports
+              Unable to load dashboard
             </Text>
 
             <Text className="mt-2 text-center text-app-muted">
@@ -364,7 +416,6 @@ export default function AdminDashboardScreen() {
               />
             </View>
 
-            {/* All Reports */}
             <Pressable
               onPress={() =>
                 openReports()
@@ -387,9 +438,7 @@ export default function AdminDashboardScreen() {
                 </Text>
 
                 <Text className="mt-1 text-sm text-app-muted">
-                  {incidents.length}{" "}
-                  total submitted
-                  reports
+                  {incidents.length} total submitted reports
                 </Text>
               </View>
 
@@ -400,8 +449,8 @@ export default function AdminDashboardScreen() {
               />
             </Pressable>
 
-            {/* Pending shortcut */}
-            {pendingCount > 0 && (
+            {pendingCount >
+              0 && (
               <Pressable
                 onPress={() =>
                   openReports(
@@ -420,15 +469,11 @@ export default function AdminDashboardScreen() {
 
                 <View className="ml-4 flex-1">
                   <Text className="text-base font-bold text-app-text">
-                    Review Pending
-                    Reports
+                    Review Pending Reports
                   </Text>
 
                   <Text className="mt-1 text-sm text-app-muted">
-                    {pendingCount}{" "}
-                    waiting for
-                    administrator
-                    review
+                    {pendingCount} waiting for administrator review
                   </Text>
                 </View>
 
@@ -439,6 +484,93 @@ export default function AdminDashboardScreen() {
                 />
               </Pressable>
             )}
+
+            <View className="mt-9 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-app-text">
+                Emergency SOS
+              </Text>
+
+              <Ionicons
+                name="warning-outline"
+                size={22}
+                color={
+                  COLORS.sos
+                }
+              />
+            </View>
+
+            <Text className="mt-1 text-sm leading-5 text-app-muted">
+              View emergency SOS events recorded by SafeHer users.
+            </Text>
+
+            <View className="mt-4 flex-row flex-wrap justify-between">
+              <StatusCard
+                title="Active SOS"
+                count={
+                  activeSOSCount
+                }
+                icon="warning-outline"
+                iconColor={
+                  COLORS.sos
+                }
+                backgroundColor="#FFE9EB"
+                onPress={() =>
+                  openSOS(
+                    "ACTIVE"
+                  )
+                }
+              />
+
+              <StatusCard
+                title="Cancelled SOS"
+                count={
+                  cancelledSOSCount
+                }
+                icon="close-circle-outline"
+                iconColor={
+                  COLORS.textSecondary
+                }
+                backgroundColor="#F5F3F6"
+                onPress={() =>
+                  openSOS(
+                    "CANCELLED"
+                  )
+                }
+              />
+            </View>
+
+            <Pressable
+              onPress={() =>
+                openSOS()
+              }
+              className="mt-1 flex-row items-center rounded-3xl border border-app-border bg-white p-5 active:opacity-75"
+            >
+              <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#FFE9EB]">
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={24}
+                  color={
+                    COLORS.sos
+                  }
+                />
+              </View>
+
+              <View className="ml-4 flex-1">
+                <Text className="text-base font-bold text-app-text">
+                  All SOS Events
+                </Text>
+
+                <Text className="mt-1 text-sm text-app-muted">
+                  {sosRecords.length} total emergency events
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color="#A995B5"
+              />
+            </Pressable>
           </>
         )}
       </ScrollView>
