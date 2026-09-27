@@ -9,6 +9,9 @@ import {
   Text,
   TextInput,
   View,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -179,7 +182,19 @@ export default function VerifyEmailScreen() {
         backgroundColor: COLORS.background,
       }}
     >
-      <View className="flex-1 px-6">
+    <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+    >
+   <ScrollView
+       contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: 24,
+          paddingBottom: 40,
+       }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+    >
         <Pressable
           onPress={() => router.back()}
           className="mt-3 h-11 w-11 items-center justify-center rounded-full bg-white"
@@ -308,7 +323,8 @@ export default function VerifyEmailScreen() {
             </Text>
           </Pressable>
         </View>
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+      </KeyboardAvoidingView>
+   </SafeAreaView>
   );
 }

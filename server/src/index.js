@@ -10,6 +10,8 @@ import routeSafetyRoutes from "./routes/routeSafety.routes.js";
 import notificationPreferenceRoutes from "./routes/notificationPreference.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import pushTokenRoutes from "./routes/pushToken.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import trustedContactRoutes from "./routes/trustedContact.routes.js";
 import adminSosRoutes from "./routes/adminSos.routes.js";
 
@@ -36,6 +38,13 @@ app.use("/api/sos", sosRoutes);
 app.use("/api/route-safety", routeSafetyRoutes);
 
 app.use("/api/notification-preferences", notificationPreferenceRoutes);
+
+app.use("/api/push-tokens", pushTokenRoutes);
+
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
 
 app.use("/api/users", userRoutes);
 
