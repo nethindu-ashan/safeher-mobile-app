@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
-    
     "ios": {
       "supportsTablet": true
     },
@@ -18,7 +17,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -27,6 +25,8 @@
     },
     "plugins": [
       "expo-router",
+      "expo-notifications",
+      "expo-location",
       [
         "expo-splash-screen",
         {
@@ -45,6 +45,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4015c50e-77c5-499f-87ea-42d6e8a4e659"
+      }
+    },
+    "owner": "oshadhawedage"
   }
 }
