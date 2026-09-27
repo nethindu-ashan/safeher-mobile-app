@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -40,6 +40,8 @@ import * as Location from "expo-location";
 
 export default function RouteScreen() {
   const { setSelectedRoute } = useRouteContext();
+
+  const mapRef = useRef<MapView>(null);
 
   // Destination entered by the user.
   const [destination, setDestination] =
@@ -93,6 +95,8 @@ export default function RouteScreen() {
   // Controls route results bottom sheet.
   const [isResultsExpanded, setIsResultsExpanded] =
     useState(true);
+
+  
 
   /*
    * Automatically get the user's
@@ -173,6 +177,41 @@ export default function RouteScreen() {
       return;
     }
 
+    let destinationCoordinates = selectedDestination;
+
+    if (!destinationCoordinates) {
+      try {
+        const locations = await Location.geocodeAsync(
+          destinationValue
+        );
+
+        if (locations.length > 0) {
+          destinationCoordinates = {
+            latitude: locations[0].latitude,
+            longitude: locations[0].longitude,
+          };
+
+          setSelectedDestination(destinationCoordinates);
+
+          mapRef.current?.animateToRegion(
+            {
+              latitude: destinationCoordinates.latitude,
+              longitude: destinationCoordinates.longitude,
+              latitudeDelta: 0.03,
+              longitudeDelta: 0.03,
+            },
+            500
+          );
+
+        }
+      } catch (error) {
+        console.error(
+          "Destination geocoding error:",
+          error
+        );
+      }
+    }
+
     /*
      * Current location must be available.
      */
@@ -215,12 +254,12 @@ export default function RouteScreen() {
 
         destination: destinationValue,
 
-        ...(selectedDestination && {
+        ...(destinationCoordinates && {
           destinationLatitude:
-            selectedDestination.latitude,
+            destinationCoordinates.latitude,
 
           destinationLongitude:
-            selectedDestination.longitude,
+            destinationCoordinates.longitude,
         }),
       });
 
@@ -362,7 +401,7 @@ export default function RouteScreen() {
 
         {/* Full Screen Map */}
         <View className="absolute inset-0">
-          <MapView
+          <MapView 
             style={{
               width: "100%",
               height: "100%",
@@ -406,6 +445,7 @@ export default function RouteScreen() {
 
         <View className="absolute inset-0">
           <MapView
+            ref={mapRef}
             style={{
               width: "100%",
               height: "100%",
