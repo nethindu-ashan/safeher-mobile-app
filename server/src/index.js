@@ -12,6 +12,8 @@ import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import pushTokenRoutes from "./routes/pushToken.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import trustedContactRoutes from "./routes/trustedContact.routes.js";
+import adminSosRoutes from "./routes/adminSos.routes.js";
 
 const app = express();
 
@@ -46,7 +48,11 @@ app.use(
 
 app.use("/api/users", userRoutes);
 
+app.use("/api/admin/sos", adminSosRoutes);
+
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/trusted-contacts", trustedContactRoutes);
 
 const PORT = process.env.PORT || 5001;
 

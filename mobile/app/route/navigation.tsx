@@ -107,6 +107,9 @@ export default function NavigationScreen() {
   const [nearbyIncident, setNearbyIncident] =
     useState<RouteSafetyIncident | null>(null);
 
+  const [hasReachedDestination, setHasReachedDestination] =
+    useState(false);
+
   const [isSafetyLoading, setIsSafetyLoading] =
     useState(false);
 
@@ -116,16 +119,11 @@ export default function NavigationScreen() {
   const [errorMessage, setErrorMessage] =
     useState("");
 
-  /*
-   * Controls whether the bottom panel
-   * is expanded or minimized.
-   */
+  // Controls whether the bottom panel is expanded or minimized.
   const [isPanelExpanded, setIsPanelExpanded] =
     useState(true);
 
-  /*
-   * Decode the selected route.
-   */
+  // Decode the selected route.
   useEffect(() => {
     if (!selectedRoute?.encodedPolyline) {
       return;
@@ -138,10 +136,7 @@ export default function NavigationScreen() {
     setRouteCoordinates(coordinates);
   }, [selectedRoute]);
 
-  /*
-   * Load safety incidents around
-   * the selected route.
-   */
+  // Load safety incidents around the selected route.
   useEffect(() => {
     if (!selectedRoute?.encodedPolyline) {
       return;
@@ -178,9 +173,7 @@ export default function NavigationScreen() {
     loadRouteSafety();
   }, [selectedRoute]);
 
-  /*
-   * Start live location tracking.
-   */
+  // Start live location tracking.
   useEffect(() => {
     let mounted = true;
 
@@ -190,9 +183,7 @@ export default function NavigationScreen() {
           setIsLoading(true);
           setErrorMessage("");
 
-          /*
-           * Request foreground location permission.
-           */
+          // Request foreground location permission.
           const { status } =
             await Location.requestForegroundPermissionsAsync();
 
@@ -205,9 +196,7 @@ export default function NavigationScreen() {
             return;
           }
 
-          /*
-           * Get initial location.
-           */
+          // Get initial location.
           const location =
             await Location.getCurrentPositionAsync(
               {
@@ -228,9 +217,7 @@ export default function NavigationScreen() {
               coordinates
             );
 
-            /*
-             * Center map on user's location.
-             */
+            // Center map on user's location.
             mapRef.current?.animateToRegion(
               {
                 latitude:
@@ -244,9 +231,7 @@ export default function NavigationScreen() {
             );
           }
 
-          /*
-           * Start continuous location tracking.
-           */
+          // Start continuous location tracking.
           locationSubscription.current =
             await Location.watchPositionAsync(
               {
@@ -273,20 +258,33 @@ export default function NavigationScreen() {
                       .longitude,
                 };
 
-                /*
-                 * Update current location.
-                 */
+                //Update current location.
                 setCurrentLocation(
                   coordinates
                 );
 
-                /*
-                 * Check whether user is
-                 * close to a safety incident.
-                 */
-                const nearby =
-                  safetyIncidentsRef.current.find(
-                    (incident) => {
+                // Check whether the user has reached the destination.
+                if (routeCoordinates.length > 0) {
+                  const destination =
+                    routeCoordinates[
+                      routeCoordinates.length - 1
+                    ];
+
+                  const distanceToDestination =
+                    calculateDistanceKm(
+                      coordinates,
+                      destination
+                    );
+
+                  //  0.05 km = 50 metres.
+                  if (distanceToDestination <= 0.05) {
+                    setHasReachedDestination(true);
+                  }
+                }
+
+
+                // Check whether user is close to a safety incident.
+                const nearby = safetyIncidentsRef.current.find((incident) => {
                       const distance =
                         calculateDistanceKm(
                           coordinates,
@@ -306,10 +304,8 @@ export default function NavigationScreen() {
                   nearby ?? null
                 );
 
-                /*
-                 * Keep map centered
-                 * on current location.
-                 */
+
+                // Keep map centered on current location.
                 mapRef.current?.animateToRegion(
                   {
                     latitude:
@@ -346,10 +342,7 @@ export default function NavigationScreen() {
 
     startLocationTracking();
 
-    /*
-     * Stop tracking when leaving
-     * the navigation screen.
-     */
+    // Stop tracking when leaving the navigation screen.
     return () => {
       mounted = false;
 
@@ -360,9 +353,7 @@ export default function NavigationScreen() {
     };
   }, []);
 
-  /*
-   * End navigation.
-   */
+ //End navigation.
   const handleEndNavigation = () => {
     locationSubscription.current?.remove();
 
@@ -372,9 +363,7 @@ export default function NavigationScreen() {
     router.back();
   };
 
-  /*
-   * No selected route.
-   */
+  //No selected route.
   if (!selectedRoute) {
     return (
       <SafeAreaView
@@ -397,9 +386,7 @@ export default function NavigationScreen() {
     );
   }
 
-  /*
-   * Loading screen.
-   */
+  // Loading current location.
   if (
     isLoading &&
     !currentLocation
@@ -473,8 +460,7 @@ export default function NavigationScreen() {
         >
 
           {/* Selected route */}
-          {routeCoordinates.length >
-            0 && (
+          {routeCoordinates.length > 0 && (
             <Polyline
               coordinates={
                 routeCoordinates
@@ -498,8 +484,7 @@ export default function NavigationScreen() {
           )}
 
           {/* Destination */}
-          {routeCoordinates.length >
-            0 && (
+          {routeCoordinates.length > 0 && (
             <Marker
               coordinate={
                 routeCoordinates[
@@ -545,10 +530,40 @@ export default function NavigationScreen() {
           <ScreenHeader title="Navigation" />
         </View>
 
+
+        {/* =====================================
+            DESTINATION REACHED ALERT
+        ====================================== */}
+        {hasReachedDestination && (
+          <View className="absolute left-4 right-4 top-20 rounded-2xl bg-green-500 px-4 py-4">
+
+            <View className="flex-row items-center">
+
+              <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-white">
+                <Text className="text-xl">
+                  ✓
+                </Text>
+              </View>
+
+              <View className="flex-1">
+                <Text className="font-bold text-white">
+                  Destination Reached
+                </Text>
+
+                <Text className="mt-1 text-sm text-white">
+                  You have reached your destination.
+                </Text>
+              </View>
+
+            </View>
+          </View>
+        )}
+
+
         {/* =====================================
             SAFETY ALERT
         ====================================== */}
-        {nearbyIncident && (
+        {nearbyIncident && !hasReachedDestination && (
           <View className="absolute left-4 right-4 top-20 rounded-2xl bg-red-500 px-4 py-4">
 
             <View className="flex-row items-center">
@@ -690,6 +705,10 @@ export default function NavigationScreen() {
                   <Text className="mt-2 text-sm text-app-text-secondary">
                     Checking recent safety reports...
                   </Text>
+                ) : hasReachedDestination ? (
+                  <Text className="mt-2 text-sm text-green-600">
+                    ✓ You have reached your destination.
+                  </Text>
                 ) : nearbyIncident ? (
                   <Text className="mt-2 text-sm text-red-500">
                     ⚠️ Safety incident reported nearby.
@@ -724,15 +743,18 @@ export default function NavigationScreen() {
                 </Text>
               )}
 
-              {/* End navigation */}
               <Pressable
-                onPress={
-                  handleEndNavigation
-                }
-                className="mt-5 rounded-full bg-red-500 py-4 active:opacity-80"
+                onPress={handleEndNavigation}
+                className={`mt-5 rounded-full py-4 active:opacity-80 ${
+                  hasReachedDestination
+                    ? "bg-green-500"
+                    : "bg-red-500"
+                }`}
               >
                 <Text className="text-center font-semibold text-white">
-                  End Navigation
+                  {hasReachedDestination
+                    ? "Finish Navigation"
+                    : "End Navigation"}
                 </Text>
               </Pressable>
             </>
