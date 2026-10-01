@@ -1,66 +1,216 @@
 import { Ionicons } from "@expo/vector-icons";
+
+import {
+  Raleway_400Regular,
+  Raleway_500Medium,
+  Raleway_600SemiBold,
+  Raleway_700Bold,
+  Raleway_800ExtraBold,
+  useFonts,
+} from "@expo-google-fonts/raleway";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { ComponentProps, useEffect, useState } from "react";
+
 import {
+  ComponentProps,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Animated,
+  Easing,
+  ImageBackground,
   Pressable,
   ScrollView,
   StatusBar,
   Text,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { COLORS, GRADIENTS } from "../../src/constants/theme";
+import { COLORS } from "../../src/constants/theme";
 import { useAuth } from "../../src/context/AuthContext";
 import { getMyProfile } from "../../src/services/userService";
 
-type IconName = ComponentProps<typeof Ionicons>["name"];
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
 
 type QuickActionProps = {
   title: string;
   subtitle: string;
   icon: IconName;
-  iconColor: string;
-  iconBackground: string;
+  tone?: "purple" | "pink";
   onPress: () => void;
 };
 
-function QuickActionCard({
+const morningBanner = require(
+  "../../assets/images/home/morning-banner.png"
+);
+
+const afternoonBanner = require(
+  "../../assets/images/home/afternoon-banner.png"
+);
+
+const nightBanner = require(
+  "../../assets/images/home/night-banner.png"
+);
+
+const safetyBanner = require(
+  "../../assets/images/home/safety-banner.png"
+);
+
+const BACKGROUND = "#FFFBFD";
+const WHITE = "#FFFFFF";
+const BORDER = "#EAE4ED";
+
+const PURPLE_SOFT = "#F5F0FF";
+const PINK_SOFT = "#FFF0F5";
+
+const SOS_RED = "#D92D20";
+const SOS_RING = "#F97066";
+
+function getBannerData() {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return {
+      image: morningBanner,
+      greeting: "Good Morning",
+      message: "Start your day with a safer journey.",
+    };
+  }
+
+  if (hour >= 12 && hour < 18) {
+    return {
+      image: afternoonBanner,
+      greeting: "Good Afternoon",
+      message: "Stay aware and travel with confidence.",
+    };
+  }
+
+  if (hour >= 18 && hour < 22) {
+    return {
+      image: nightBanner,
+      greeting: "Good Evening",
+      message: "Stay connected on your journey home.",
+    };
+  }
+
+  return {
+    image: nightBanner,
+    greeting: "Good Night",
+    message: "Stay alert. Help is always within reach.",
+  };
+}
+
+function QuickAction({
   title,
   subtitle,
   icon,
-  iconColor,
-  iconBackground,
+  tone = "purple",
   onPress,
 }: QuickActionProps) {
+  const isPink = tone === "pink";
+
   return (
     <Pressable
       onPress={onPress}
-      className="mb-3 w-[48.5%] rounded-3xl border border-app-border bg-white p-4 active:opacity-75"
+      style={({ pressed }) => ({
+        width: "48%",
+        height: 108,
+        marginBottom: 12,
+        padding: 14,
+
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: BORDER,
+
+        backgroundColor: WHITE,
+
+        opacity: pressed ? 0.72 : 1,
+      })}
     >
       <View
         style={{
-          width: 46,
-          height: 46,
-          borderRadius: 16,
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: iconBackground,
+          justifyContent: "space-between",
         }}
       >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+
+            alignItems: "center",
+            justifyContent: "center",
+
+            backgroundColor: isPink
+              ? PINK_SOFT
+              : PURPLE_SOFT,
+          }}
+        >
+          <Ionicons
+            name={icon}
+            size={18}
+            color={
+              isPink
+                ? COLORS.pink
+                : COLORS.primary
+            }
+          />
+        </View>
+
         <Ionicons
-          name={icon}
-          size={23}
-          color={iconColor}
+          name="arrow-up-outline"
+          size={14}
+          color="#B1A8B5"
+          style={{
+            transform: [
+              {
+                rotate: "45deg",
+              },
+            ],
+          }}
         />
       </View>
 
-      <Text className="mt-4 text-base font-bold text-app-text">
+      <Text
+        numberOfLines={1}
+        style={{
+          marginTop: 10,
+
+          color: COLORS.text,
+
+          fontFamily:
+            "Raleway_700Bold",
+
+          fontSize: 12.3,
+        }}
+      >
         {title}
       </Text>
 
-      <Text className="mt-1 text-xs leading-5 text-app-muted">
+      <Text
+        numberOfLines={2}
+        style={{
+          marginTop: 3,
+
+          color:
+            COLORS.textSecondary,
+
+          fontFamily:
+            "Raleway_400Regular",
+
+          fontSize: 9.4,
+          lineHeight: 13,
+        }}
+      >
         {subtitle}
       </Text>
     </Pressable>
@@ -68,11 +218,100 @@ function QuickActionCard({
 }
 
 export default function HomeScreen() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const [fontsLoaded] = useFonts({
+    Raleway_400Regular,
+    Raleway_500Medium,
+    Raleway_600SemiBold,
+    Raleway_700Bold,
+    Raleway_800ExtraBold,
+  });
 
-  const [fullName, setFullName] = useState<string | null>(
-    null
-  );
+  const {
+    user,
+    isAuthenticated,
+    loading,
+  } = useAuth();
+
+  const [
+    fullName,
+    setFullName,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    banner,
+    setBanner,
+  ] =
+    useState(
+      getBannerData()
+    );
+
+  const pulse =
+    useRef(
+      new Animated.Value(1)
+    ).current;
+
+  useEffect(() => {
+    const animation =
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(
+            pulse,
+            {
+              toValue: 1.17,
+              duration: 900,
+              easing:
+                Easing.inOut(
+                  Easing.ease
+                ),
+              useNativeDriver: true,
+            }
+          ),
+
+          Animated.timing(
+            pulse,
+            {
+              toValue: 1,
+              duration: 900,
+              easing:
+                Easing.inOut(
+                  Easing.ease
+                ),
+              useNativeDriver: true,
+            }
+          ),
+        ])
+      );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [pulse]);
+
+  useEffect(() => {
+    const updateBanner =
+      () => {
+        setBanner(
+          getBannerData()
+        );
+      };
+
+    updateBanner();
+
+    const timer =
+      setInterval(
+        updateBanner,
+        60000
+      );
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -82,9 +321,12 @@ export default function HomeScreen() {
 
     async function loadProfile() {
       try {
-        const response = await getMyProfile();
+        const response =
+          await getMyProfile();
 
-        setFullName(response.data.fullName);
+        setFullName(
+          response.data.fullName
+        );
       } catch (error) {
         console.log(
           "Unable to load Home profile:",
@@ -92,441 +334,1130 @@ export default function HomeScreen() {
         );
 
         const metadataName =
-          user?.user_metadata?.full_name;
+          user?.user_metadata
+            ?.full_name;
 
         if (
-          typeof metadataName === "string" &&
+          typeof metadataName ===
+            "string" &&
           metadataName.trim()
         ) {
-          setFullName(metadataName.trim());
+          setFullName(
+            metadataName.trim()
+          );
         }
       }
     }
 
     loadProfile();
-  }, [isAuthenticated, user?.id]);
+  }, [
+    isAuthenticated,
+    user?.id,
+  ]);
+
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor:
+            BACKGROUND,
+        }}
+      />
+    );
+  }
 
   const firstName =
-    fullName?.trim().split(" ")[0] || "there";
+    fullName
+      ?.trim()
+      .split(" ")[0] ||
+    "";
+
+  const openContacts =
+    () => {
+      if (isAuthenticated) {
+        router.push(
+          "/trusted-contacts"
+        );
+      } else {
+        router.push(
+          "/auth/sign-in"
+        );
+      }
+    };
+
+  const openReports =
+    () => {
+      if (isAuthenticated) {
+        router.push(
+          "/(tabs)/reports"
+        );
+      } else {
+        router.push(
+          "/auth/sign-in"
+        );
+      }
+    };
 
   return (
     <SafeAreaView
+      edges={["top"]}
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor:
+          COLORS.primaryDark,
       }}
-      edges={["top"]}
     >
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor={COLORS.background}
+        barStyle="light-content"
+        backgroundColor={
+          COLORS.primaryDark
+        }
       />
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 10,
-          paddingBottom: 40,
+      <View
+        style={{
+          flex: 1,
+          backgroundColor:
+            BACKGROUND,
         }}
-        showsVerticalScrollIndicator={false}
       >
-        {/* ============================== */}
-        {/* HEADER */}
-        {/* ============================== */}
-
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 flex-row items-center">
-            <LinearGradient
-              colors={GRADIENTS.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                width: 46,
-                height: 46,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={25}
-                color="#FFFFFF"
-              />
-            </LinearGradient>
-
-            <View className="ml-3 flex-1">
-              <Text className="text-xl font-bold text-app-text">
-                SafeHer
-              </Text>
-
-              <Text className="mt-0.5 text-xs text-app-muted">
-                Together for Safer Journeys
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={() =>
-              router.push("/(tabs)/profile")
-            }
-            className="h-11 w-11 items-center justify-center rounded-full border border-app-border bg-white active:opacity-70"
-          >
-            <Ionicons
-              name={
-                isAuthenticated
-                  ? "person"
-                  : "person-outline"
-              }
-              size={21}
-              color={COLORS.primary}
-            />
-          </Pressable>
-        </View>
-
-        {/* ============================== */}
-        {/* USER / GUEST GREETING */}
-        {/* ============================== */}
-
-        {!loading && (
-          <View className="mt-6">
-            {isAuthenticated ? (
-              <>
-                <Text className="text-sm font-medium text-app-muted">
-                  Welcome back,
-                </Text>
-
-                <Text className="mt-1 text-2xl font-bold text-app-text">
-                  {firstName} 👋
-                </Text>
-              </>
-            ) : (
-              <View className="flex-row items-center justify-between rounded-2xl border border-app-border bg-white px-4 py-3">
-                <View className="mr-3 flex-1">
-                  <Text className="text-sm font-bold text-app-text">
-                    Using SafeHer as a guest
-                  </Text>
-
-                  <Text className="mt-1 text-xs leading-4 text-app-muted">
-                    Safety features are available without
-                    creating an account.
-                  </Text>
-                </View>
-
-                <Pressable
-                  onPress={() =>
-                    router.push("/auth/sign-in")
-                  }
-                  className="rounded-xl bg-light-purple px-4 py-2.5"
-                >
-                  <Text className="text-sm font-bold text-primary">
-                    Sign In
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ============================== */}
-        {/* MAIN SAFETY CARD */}
-        {/* ============================== */}
-
-        <LinearGradient
-          colors={[
-            "#FFF0F5",
-            "#F7F1FF",
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <ScrollView
           style={{
-            marginTop: 20,
-            borderRadius: 28,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: COLORS.border,
+            flex: 1,
+          }}
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={{
+            paddingBottom: 34,
           }}
         >
-          <View className="flex-row items-start justify-between">
-            <View className="mr-3 flex-1">
-              <Text className="text-xl font-bold text-app-text">
-                Your safety matters
-              </Text>
+          <ImageBackground
+            source={banner.image}
+            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: 94,
+            }}
+          >
+            <LinearGradient
+              colors={[
+                "rgba(73,25,160,0.88)",
+                "rgba(117,39,209,0.58)",
+                "rgba(126,45,214,0.18)",
+                "rgba(0,0,0,0.02)",
+              ]}
+              start={{
+                x: 0,
+                y: 0.5,
+              }}
+              end={{
+                x: 1,
+                y: 0.5,
+              }}
+              style={{
+                flex: 1,
 
-              <Text className="mt-2 text-sm leading-6 text-app-muted">
-                Access emergency assistance,
-                report incidents and find nearby
-                support when you need it.
-              </Text>
-            </View>
+                justifyContent:
+                  "center",
 
-            <View className="h-12 w-12 items-center justify-center rounded-2xl bg-white">
-              <Ionicons
-                name="heart-outline"
-                size={25}
-                color={COLORS.pink}
-              />
-            </View>
-          </View>
-
-          {/* SOS */}
-          <View className="mt-6 items-center">
-            <Pressable
-              onPress={() =>
-                router.push("/report/sos")
-              }
-              className="active:opacity-80"
+                paddingHorizontal: 26,
+              }}
             >
               <View
                 style={{
-                  width: 126,
-                  height: 126,
-                  borderRadius: 63,
-                  backgroundColor: "#FFE3E6",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: "56%",
                 }}
               >
-                <View
+                <Text
                   style={{
-                    width: 104,
-                    height: 104,
-                    borderRadius: 52,
-                    backgroundColor: "#FFC9CE",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    color:
+                      "#FFFFFF",
+
+                    fontFamily:
+                      "Raleway_800ExtraBold",
+
+                    fontSize: 18,
+                    lineHeight: 21,
                   }}
+                >
+                  {banner.greeting}
+                </Text>
+
+                {isAuthenticated &&
+                  !loading &&
+                  firstName && (
+                    <Text
+                      style={{
+                        marginTop: 1,
+
+                        color:
+                          "#FFFFFF",
+
+                        fontFamily:
+                          "Raleway_700Bold",
+
+                        fontSize: 10.5,
+                      }}
+                    >
+                      {firstName}
+                    </Text>
+                  )}
+
+                <Text
+                  numberOfLines={2}
+                  style={{
+                    marginTop: 4,
+
+                    maxWidth: 165,
+
+                    color:
+                      "rgba(255,255,255,0.92)",
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 8.8,
+                    lineHeight: 12,
+                  }}
+                >
+                  {banner.message}
+                </Text>
+              </View>
+            </LinearGradient>
+          </ImageBackground>
+
+          <View
+            style={{
+              paddingHorizontal: 26,
+            }}
+          >
+            <View
+              style={{
+                alignItems: "center",
+
+                paddingTop: 23,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    COLORS.text,
+
+                  fontFamily:
+                    "Raleway_800ExtraBold",
+
+                  fontSize: 19,
+
+                  textAlign:
+                    "center",
+                }}
+              >
+                Emergency SOS
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 4,
+
+                  color:
+                    COLORS.textSecondary,
+
+                  fontFamily:
+                    "Raleway_400Regular",
+
+                  fontSize: 10.3,
+
+                  textAlign:
+                    "center",
+                }}
+              >
+                Immediate help when every second matters
+              </Text>
+
+              <View
+                style={{
+                  width: 174,
+                  height: 174,
+
+                  marginTop: 5,
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position:
+                      "absolute",
+
+                    width: 126,
+                    height: 126,
+
+                    borderRadius: 63,
+
+                    borderWidth: 3,
+                    borderColor:
+                      SOS_RING,
+
+                    backgroundColor:
+                      "transparent",
+
+                    transform: [
+                      {
+                        scale:
+                          pulse,
+                      },
+                    ],
+                  }}
+                />
+
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position:
+                      "absolute",
+
+                    width: 128,
+                    height: 128,
+
+                    borderRadius: 64,
+
+                    borderWidth: 1,
+                    borderColor:
+                      "#FECACA",
+
+                    backgroundColor:
+                      "transparent",
+                  }}
+                />
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Emergency SOS"
+                  onPress={() =>
+                    router.push(
+                      "/report/sos-countdown"
+                    )
+                  }
+                  style={({ pressed }) => ({
+                    width: 108,
+                    height: 108,
+
+                    borderRadius: 54,
+
+                    alignItems:
+                      "center",
+
+                    justifyContent:
+                      "center",
+
+                    elevation: 12,
+
+                    shadowColor:
+                      "#7F1D1D",
+
+                    shadowOpacity: 0.3,
+
+                    shadowRadius: 10,
+
+                    shadowOffset: {
+                      width: 0,
+                      height: 5,
+                    },
+
+                    transform: [
+                      {
+                        scale:
+                          pressed
+                            ? 0.96
+                            : 1,
+                      },
+                    ],
+                  })}
                 >
                   <View
                     style={{
-                      width: 84,
-                      height: 84,
-                      borderRadius: 42,
-                      backgroundColor: COLORS.sos,
-                      alignItems: "center",
-                      justifyContent: "center",
+                      width: 108,
+                      height: 108,
+
+                      borderRadius: 54,
+
+                      backgroundColor:
+                        SOS_RED,
+
+                      alignItems:
+                        "center",
+
+                      justifyContent:
+                        "center",
                     }}
                   >
                     <Ionicons
                       name="warning-outline"
-                      size={25}
+                      size={28}
                       color="#FFFFFF"
                     />
 
-                    <Text className="mt-1 text-lg font-extrabold text-white">
+                    <Text
+                      style={{
+                        marginTop: 3,
+
+                        color:
+                          "#FFFFFF",
+
+                        fontFamily:
+                          "Raleway_800ExtraBold",
+
+                        fontSize: 20,
+                      }}
+                    >
                       SOS
                     </Text>
                   </View>
-                </View>
-              </View>
-            </Pressable>
-
-            <Text className="mt-4 text-sm font-semibold text-app-text">
-              Emergency SOS
-            </Text>
-
-            <Text className="mt-1 text-center text-xs text-app-muted">
-              Tap for emergency assistance
-            </Text>
-          </View>
-        </LinearGradient>
-
-        {/* ============================== */}
-        {/* QUICK ACTIONS */}
-        {/* ============================== */}
-
-        <View className="mt-7">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-app-text">
-              Quick Actions
-            </Text>
-
-            <Text className="text-xs text-app-muted">
-              Stay safe
-            </Text>
-          </View>
-
-          <View className="mt-4 flex-row flex-wrap justify-between">
-            <QuickActionCard
-              title="Report"
-              subtitle="Report a safety incident"
-              icon="document-text-outline"
-              iconColor={COLORS.pink}
-              iconBackground="#FFF0F5"
-              onPress={() =>
-                router.push("/report")
-              }
-            />
-
-            <QuickActionCard
-              title="Safe Route"
-              subtitle="Find a safer way to travel"
-              icon="navigate-outline"
-              iconColor={COLORS.primary}
-              iconBackground="#F4EEFF"
-              onPress={() =>
-                router.push("/route")
-              }
-            />
-
-            <QuickActionCard
-              title="Alerts"
-              subtitle="View nearby safety alerts"
-              icon="notifications-outline"
-              iconColor="#E59B16"
-              iconBackground="#FFF7E7"
-              onPress={() =>
-                router.push("/(tabs)/alerts")
-              }
-            />
-
-            <QuickActionCard
-              title="Nearby Help"
-              subtitle="Find support services nearby"
-              icon="medical-outline"
-              iconColor="#22A06B"
-              iconBackground="#ECFDF5"
-              onPress={() =>
-                router.push("/help")
-              }
-            />
-          </View>
-        </View>
-
-        {/* ============================== */}
-        {/* MY REPORTS */}
-        {/* ============================== */}
-
-        <Pressable
-          onPress={() => {
-            if (isAuthenticated) {
-              router.push("/(tabs)/reports");
-            } else {
-              router.push("/auth/sign-in");
-            }
-          }}
-          className="mt-3 flex-row items-center rounded-3xl border border-app-border bg-white p-4 active:opacity-70"
-        >
-          <View className="h-12 w-12 items-center justify-center rounded-2xl bg-light-purple">
-            <Ionicons
-              name="folder-open-outline"
-              size={23}
-              color={COLORS.primary}
-            />
-          </View>
-
-          <View className="ml-4 flex-1">
-            <Text className="text-base font-bold text-app-text">
-              My Reports
-            </Text>
-
-            <Text className="mt-1 text-sm text-app-muted">
-              {isAuthenticated
-                ? "View and track your submitted reports"
-                : "Sign in to access your personal reports"}
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#A995B5"
-          />
-        </Pressable>
-
-        {/* ============================== */}
-        {/* ACCOUNT CARD FOR GUEST */}
-        {/* ============================== */}
-
-        {!isAuthenticated && !loading && (
-          <View className="mt-5 rounded-3xl border border-app-border bg-white p-5">
-            <View className="flex-row items-start">
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-light-purple">
-                <Ionicons
-                  name="person-add-outline"
-                  size={22}
-                  color={COLORS.primary}
-                />
+                </Pressable>
               </View>
 
-              <View className="ml-3 flex-1">
-                <Text className="text-base font-bold text-app-text">
-                  Create a SafeHer account
-                </Text>
+              <View
+                style={{
+                  marginTop: -7,
 
-                <Text className="mt-1 text-sm leading-5 text-app-muted">
-                  Save your profile, manage notification
-                  preferences and access personal safety
-                  information.
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+
+                  borderRadius: 999,
+
+                  backgroundColor:
+                    "#FFF1F0",
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      "#B42318",
+
+                    fontFamily:
+                      "Raleway_600SemiBold",
+
+                    fontSize: 9.3,
+                  }}
+                >
+                  Tap to start 3-second emergency countdown
                 </Text>
               </View>
             </View>
 
-            <View className="mt-4 flex-row gap-3">
-              <Pressable
-                onPress={() =>
-                  router.push("/auth/sign-in")
-                }
-                className="flex-1 items-center rounded-2xl border border-primary bg-white py-3"
+            {!isAuthenticated &&
+              !loading && (
+                <View
+                  style={{
+                    marginTop: 22,
+
+                    padding: 13,
+
+                    borderRadius: 17,
+
+                    borderWidth: 1,
+                    borderColor:
+                      BORDER,
+
+                    backgroundColor:
+                      WHITE,
+
+                    flexDirection:
+                      "row",
+
+                    alignItems:
+                      "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+
+                      borderRadius: 12,
+
+                      backgroundColor:
+                        PURPLE_SOFT,
+
+                      alignItems:
+                        "center",
+
+                      justifyContent:
+                        "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={18}
+                      color={
+                        COLORS.primary
+                      }
+                    />
+                  </View>
+
+                  <View
+                    style={{
+                      flex: 1,
+
+                      marginLeft: 11,
+                      marginRight: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          COLORS.text,
+
+                        fontFamily:
+                          "Raleway_700Bold",
+
+                        fontSize: 11,
+                      }}
+                    >
+                      You're using SafeHer as a guest
+                    </Text>
+
+                    <Text
+                      numberOfLines={2}
+                      style={{
+                        marginTop: 2,
+
+                        color:
+                          COLORS.textSecondary,
+
+                        fontFamily:
+                          "Raleway_400Regular",
+
+                        fontSize: 9.1,
+                        lineHeight: 13,
+                      }}
+                    >
+                      Sign in to save contacts and track reports.
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() =>
+                      router.push(
+                        "/auth/sign-in"
+                      )
+                    }
+                    style={({ pressed }) => ({
+                      height: 34,
+
+                      paddingHorizontal: 13,
+
+                      borderRadius: 11,
+
+                      backgroundColor:
+                        pressed
+                          ? COLORS.primaryDark
+                          : COLORS.primary,
+
+                      alignItems:
+                        "center",
+
+                      justifyContent:
+                        "center",
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          "#FFFFFF",
+
+                        fontFamily:
+                          "Raleway_700Bold",
+
+                        fontSize: 9.5,
+                      }}
+                    >
+                      Sign In
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+
+            <View
+              style={{
+                marginTop: 28,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection:
+                    "row",
+
+                  alignItems:
+                    "flex-end",
+
+                  justifyContent:
+                    "space-between",
+                }}
               >
-                <Text className="font-bold text-primary">
-                  Sign In
+                <View>
+                  <Text
+                    style={{
+                      color:
+                        COLORS.text,
+
+                      fontFamily:
+                        "Raleway_700Bold",
+
+                      fontSize: 16.5,
+                    }}
+                  >
+                    Plan your journey
+                  </Text>
+
+                  <Text
+                    style={{
+                      marginTop: 2,
+
+                      color:
+                        COLORS.textSecondary,
+
+                      fontFamily:
+                        "Raleway_400Regular",
+
+                      fontSize: 10,
+                    }}
+                  >
+                    Check before you travel
+                  </Text>
+                </View>
+
+                <Text
+                  style={{
+                    color:
+                      COLORS.primary,
+
+                    fontFamily:
+                      "Raleway_600SemiBold",
+
+                    fontSize: 9.5,
+                  }}
+                >
+                  Safer travel
                 </Text>
-              </Pressable>
+              </View>
 
               <Pressable
                 onPress={() =>
-                  router.push("/auth/sign-up")
+                  router.push(
+                    "/route"
+                  )
                 }
-                className="flex-1 overflow-hidden rounded-2xl"
+                style={({ pressed }) => ({
+                  marginTop: 11,
+
+                  borderRadius: 18,
+
+                  overflow:
+                    "hidden",
+
+                  opacity:
+                    pressed
+                      ? 0.82
+                      : 1,
+                })}
               >
                 <LinearGradient
-                  colors={GRADIENTS.primary}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+                  colors={[
+                    "#7137E8",
+                    "#A13FE5",
+                    "#EC4D95",
+                  ]}
+                  start={{
+                    x: 0,
+                    y: 0.5,
+                  }}
+                  end={{
+                    x: 1,
+                    y: 0.5,
+                  }}
                   style={{
-                    minHeight: 48,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 16,
+                    height: 72,
+
+                    paddingHorizontal: 15,
+
+                    flexDirection:
+                      "row",
+
+                    alignItems:
+                      "center",
                   }}
                 >
-                  <Text className="font-bold text-white">
-                    Create Account
-                  </Text>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+
+                      borderRadius: 13,
+
+                      backgroundColor:
+                        "rgba(255,255,255,0.17)",
+
+                      alignItems:
+                        "center",
+
+                      justifyContent:
+                        "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="navigate-outline"
+                      size={19}
+                      color="#FFFFFF"
+                    />
+                  </View>
+
+                  <View
+                    style={{
+                      flex: 1,
+
+                      marginLeft: 12,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          "#FFFFFF",
+
+                        fontFamily:
+                          "Raleway_700Bold",
+
+                        fontSize: 13,
+                      }}
+                    >
+                      Plan a Safer Route
+                    </Text>
+
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        marginTop: 2,
+
+                        color:
+                          "rgba(255,255,255,0.84)",
+
+                        fontFamily:
+                          "Raleway_400Regular",
+
+                        fontSize: 9.2,
+                      }}
+                    >
+                      Compare route options before travelling
+                    </Text>
+                  </View>
+
+                  <Ionicons
+                    name="arrow-forward"
+                    size={18}
+                    color="#FFFFFF"
+                  />
                 </LinearGradient>
               </Pressable>
             </View>
+
+            <ImageBackground
+              source={safetyBanner}
+              resizeMode="cover"
+              imageStyle={{
+                borderRadius: 20,
+              }}
+              style={{
+                height: 112,
+
+                marginTop: 26,
+
+                overflow:
+                  "hidden",
+
+                borderRadius: 20,
+              }}
+            >
+              <LinearGradient
+                colors={[
+                  "rgba(54,15,138,0.88)",
+                  "rgba(108,34,195,0.58)",
+                  "rgba(50,20,80,0.10)",
+                ]}
+                start={{
+                  x: 0,
+                  y: 0.5,
+                }}
+                end={{
+                  x: 1,
+                  y: 0.5,
+                }}
+                style={{
+                  flex: 1,
+
+                  paddingHorizontal: 17,
+
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <View
+                  style={{
+                    width: "62%",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color:
+                        "#FFFFFF",
+
+                      fontFamily:
+                        "Raleway_800ExtraBold",
+
+                      fontSize: 15,
+                      lineHeight: 19,
+                    }}
+                  >
+                    Stay connected.
+                  </Text>
+
+                  <Text
+                    style={{
+                      color:
+                        "#FFFFFF",
+
+                      fontFamily:
+                        "Raleway_800ExtraBold",
+
+                      fontSize: 15,
+                      lineHeight: 19,
+                    }}
+                  >
+                    Travel with confidence.
+                  </Text>
+
+                  <Text
+                    numberOfLines={2}
+                    style={{
+                      marginTop: 5,
+
+                      color:
+                        "rgba(255,255,255,0.86)",
+
+                      fontFamily:
+                        "Raleway_400Regular",
+
+                      fontSize: 8.8,
+                      lineHeight: 12,
+                    }}
+                  >
+                    Keep your route and safety tools ready before every journey.
+                  </Text>
+                </View>
+              </LinearGradient>
+            </ImageBackground>
+
+            <View
+              style={{
+                marginTop: 27,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    COLORS.text,
+
+                  fontFamily:
+                    "Raleway_700Bold",
+
+                  fontSize: 16.5,
+                }}
+              >
+                Quick Help
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 3,
+
+                  color:
+                    COLORS.textSecondary,
+
+                  fontFamily:
+                    "Raleway_400Regular",
+
+                  fontSize: 10,
+                }}
+              >
+                Essential safety tools
+              </Text>
+
+              <View
+                style={{
+                  marginTop: 12,
+
+                  flexDirection:
+                    "row",
+
+                  flexWrap:
+                    "wrap",
+
+                  justifyContent:
+                    "space-between",
+                }}
+              >
+                <QuickAction
+                  title="Report Incident"
+                  subtitle="Report a safety concern"
+                  icon="document-text-outline"
+                  tone="pink"
+                  onPress={() =>
+                    router.push(
+                      "/report"
+                    )
+                  }
+                />
+
+                <QuickAction
+                  title="Nearby Help"
+                  subtitle="Find nearby support"
+                  icon="location-outline"
+                  onPress={() =>
+                    router.push(
+                      "/help"
+                    )
+                  }
+                />
+
+                <QuickAction
+                  title="Trusted Contacts"
+                  subtitle={
+                    isAuthenticated
+                      ? "Manage emergency contacts"
+                      : "Sign in to manage contacts"
+                  }
+                  icon="people-outline"
+                  onPress={
+                    openContacts
+                  }
+                />
+
+                <QuickAction
+                  title="Safety Alerts"
+                  subtitle="Check nearby alerts"
+                  icon="notifications-outline"
+                  tone="pink"
+                  onPress={() =>
+                    router.push(
+                      "/(tabs)/alerts"
+                    )
+                  }
+                />
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 14,
+              }}
+            >
+              <Text
+                style={{
+                  marginBottom: 11,
+
+                  color:
+                    COLORS.text,
+
+                  fontFamily:
+                    "Raleway_700Bold",
+
+                  fontSize: 16.5,
+                }}
+              >
+                Your Activity
+              </Text>
+
+              <Pressable
+                onPress={
+                  openReports
+                }
+                style={({ pressed }) => ({
+                  minHeight: 68,
+
+                  paddingHorizontal: 14,
+
+                  borderRadius: 17,
+
+                  borderWidth: 1,
+                  borderColor:
+                    BORDER,
+
+                  backgroundColor:
+                    WHITE,
+
+                  flexDirection:
+                    "row",
+
+                  alignItems:
+                    "center",
+
+                  opacity:
+                    pressed
+                      ? 0.72
+                      : 1,
+                })}
+              >
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+
+                    borderRadius: 12,
+
+                    backgroundColor:
+                      PURPLE_SOFT,
+
+                    alignItems:
+                      "center",
+
+                    justifyContent:
+                      "center",
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      isAuthenticated
+                        ? "folder-open-outline"
+                        : "lock-closed-outline"
+                    }
+                    size={18}
+                    color={
+                      COLORS.primary
+                    }
+                  />
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+
+                    marginLeft: 12,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color:
+                        COLORS.text,
+
+                      fontFamily:
+                        "Raleway_700Bold",
+
+                      fontSize: 12.5,
+                    }}
+                  >
+                    My Reports
+                  </Text>
+
+                  <Text
+                    style={{
+                      marginTop: 3,
+
+                      color:
+                        COLORS.textSecondary,
+
+                      fontFamily:
+                        "Raleway_400Regular",
+
+                      fontSize: 9.5,
+                    }}
+                  >
+                    {isAuthenticated
+                      ? "View and track submitted reports"
+                      : "Sign in to access your reports"}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={17}
+                  color="#AAA0B0"
+                />
+              </Pressable>
+            </View>
+
+            <View
+              style={{
+                marginTop: 17,
+
+                paddingHorizontal: 13,
+                paddingVertical: 11,
+
+                borderRadius: 16,
+
+                backgroundColor:
+                  PURPLE_SOFT,
+
+                flexDirection:
+                  "row",
+
+                alignItems:
+                  "center",
+              }}
+            >
+              <View
+                style={{
+                  width: 31,
+                  height: 31,
+
+                  borderRadius: 10,
+
+                  backgroundColor:
+                    WHITE,
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={15}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              </View>
+
+              <Text
+                style={{
+                  flex: 1,
+
+                  marginLeft: 10,
+
+                  color:
+                    COLORS.textSecondary,
+
+                  fontFamily:
+                    "Raleway_500Medium",
+
+                  fontSize: 9.5,
+                  lineHeight: 14,
+                }}
+              >
+                Stay aware of your surroundings and keep your route and trusted contacts ready.
+              </Text>
+            </View>
           </View>
-        )}
-
-        {/* ============================== */}
-        {/* SAFETY TIP */}
-        {/* ============================== */}
-
-        <View className="mt-5 flex-row rounded-3xl bg-light-purple p-5">
-          <View className="h-10 w-10 items-center justify-center rounded-full bg-white">
-            <Ionicons
-              name="bulb-outline"
-              size={21}
-              color={COLORS.primary}
-            />
-          </View>
-
-          <View className="ml-3 flex-1">
-            <Text className="text-sm font-bold text-app-text">
-              Safety Tip
-            </Text>
-
-            <Text className="mt-1 text-sm leading-5 text-app-muted">
-              Stay aware of your surroundings and use
-              SafeHer to check alerts, routes and nearby
-              support services before travelling.
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
