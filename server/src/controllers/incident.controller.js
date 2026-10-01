@@ -10,6 +10,11 @@ export const createIncident = async (
       req.user ??
       null;
 
+    console.log(
+      "CONTROLLER BODY:",
+      req.body
+    );
+
     const incidentData = {
       ...req.body,
 
@@ -18,6 +23,11 @@ export const createIncident = async (
         null,
     };
 
+    console.log(
+      "CONTROLLER INCIDENT DATA:",
+      incidentData
+    );
+
     const incident =
       await incidentService.createIncident(
         incidentData
@@ -25,8 +35,10 @@ export const createIncident = async (
 
     return res.status(201).json({
       success: true,
+
       message:
         "Incident reported successfully",
+
       data: incident,
     });
   } catch (error) {
@@ -37,6 +49,7 @@ export const createIncident = async (
 
     return res.status(400).json({
       success: false,
+
       message:
         error.message ||
         "Unable to submit incident report.",
@@ -72,6 +85,7 @@ export const getNearbyIncidents = async (
 
     return res.status(500).json({
       success: false,
+
       message:
         error.message ||
         "Unable to retrieve nearby incidents.",
@@ -94,6 +108,7 @@ export const getMyIncidents = async (
     ) {
       return res.status(401).json({
         success: false,
+
         message:
           "Authentication required.",
       });
@@ -116,6 +131,7 @@ export const getMyIncidents = async (
 
     return res.status(500).json({
       success: false,
+
       message:
         error.message ||
         "Unable to retrieve your reports.",
@@ -123,9 +139,6 @@ export const getMyIncidents = async (
   }
 };
 
-/**
- * Cancel logged-in user's report.
- */
 export const cancelMyIncident = async (
   req,
   res
@@ -141,12 +154,14 @@ export const cancelMyIncident = async (
     ) {
       return res.status(401).json({
         success: false,
+
         message:
           "Authentication required.",
       });
     }
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     const incident =
       await incidentService.cancelMyIncident(
@@ -156,8 +171,10 @@ export const cancelMyIncident = async (
 
     return res.status(200).json({
       success: true,
+
       message:
         "Report cancelled successfully.",
+
       data: incident,
     });
   } catch (error) {
@@ -168,6 +185,7 @@ export const cancelMyIncident = async (
 
     return res.status(400).json({
       success: false,
+
       message:
         error.message ||
         "Unable to cancel report.",
@@ -180,7 +198,8 @@ export const getIncidentById = async (
   res
 ) => {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     const incident =
       await incidentService.getIncidentById(
@@ -199,6 +218,7 @@ export const getIncidentById = async (
 
     return res.status(404).json({
       success: false,
+
       message:
         error.message ||
         "Unable to retrieve incident.",

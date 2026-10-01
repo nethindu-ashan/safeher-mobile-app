@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-
 import { router } from "expo-router";
 
 import {
@@ -12,118 +11,114 @@ import {
   View,
 } from "react-native";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import {
-  useState,
-} from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useState } from "react";
 
 import PrimaryButton from "../../src/components/PrimaryButton";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
-import {
-  COLORS,
-} from "../../src/constants/theme";
+import { COLORS } from "../../src/constants/theme";
 
-import {
-  useIncidentReport,
-} from "../../src/context/IncidentReportContext";
+import { useIncidentReport } from "../../src/context/IncidentReportContext";
 
-import {
-  createIncident,
-} from "../../src/services/incidentService";
+import { createIncident } from "../../src/services/incidentService";
 
-import {
-  uploadIncidentEvidence,
-} from "../../src/services/evidenceService";
+import { uploadIncidentEvidence } from "../../src/services/evidenceService";
 
 export default function ReviewIncidentScreen() {
-  const {
-    draft,
-  } = useIncidentReport();
+  const { draft } = useIncidentReport();
 
-  const [
-    submitting,
-    setSubmitting,
-  ] =
+  const [submitting, setSubmitting] =
     useState(false);
 
-  const handleSubmit =
-    async () => {
-      if (
-        draft.latitude ===
-          null ||
-        draft.longitude ===
-          null
-      ) {
-        Alert.alert(
-          "Location Required",
-          "Please select an incident location."
-        );
+  const handleSubmit = async () => {
+    if (
+      draft.latitude === null ||
+      draft.longitude === null
+    ) {
+      Alert.alert(
+        "Location Required",
+        "Please select an incident location."
+      );
 
-        router.push(
-          "/report/select-location"
-        );
+      router.push(
+        "/report/select-location"
+      );
 
-        return;
-      }
+      return;
+    }
 
-      try {
-        setSubmitting(true);
+    try {
+      setSubmitting(true);
 
-        const evidencePaths =
-          draft.evidence.length >
-          0
-            ? await uploadIncidentEvidence(
-                draft.evidence
-              )
-            : [];
+      const evidencePaths =
+        draft.evidence.length > 0
+          ? await uploadIncidentEvidence(
+              draft.evidence
+            )
+          : [];
 
-        const response =
-          await createIncident({
-            category:
-              draft.category,
-            latitude:
-              draft.latitude,
-            longitude:
-              draft.longitude,
-            dateTime:
-              draft.dateTime,
-            description:
-              draft.description,
-            isAnonymous:
-              draft.isAnonymous,
-            evidencePaths,
-          });
+      console.log(
+        "MOBILE EVIDENCE PATHS:",
+        evidencePaths
+      );
 
-        router.replace({
-          pathname:
-            "/report/success",
-          params: {
-            id:
-              response.data.id,
-            status:
-              response.data.status,
-          },
+      const response =
+        await createIncident({
+          category:
+            draft.category,
+
+          latitude:
+            draft.latitude,
+
+          longitude:
+            draft.longitude,
+
+          dateTime:
+            draft.dateTime,
+
+          description:
+            draft.description,
+
+          isAnonymous:
+            draft.isAnonymous,
+
+          evidencePaths,
         });
-      } catch (error) {
-        console.error(
-          "Report submission error:",
-          error
-        );
 
-        Alert.alert(
-          "Submission Failed",
-          error instanceof Error
-            ? error.message
-            : "Unable to submit your report."
-        );
-      } finally {
-        setSubmitting(false);
-      }
-    };
+      console.log(
+        "INCIDENT CREATE RESPONSE:",
+        response
+      );
+
+      router.replace({
+        pathname:
+          "/report/success",
+
+        params: {
+          id:
+            response.data.id,
+
+          status:
+            response.data.status,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Report submission error:",
+        error
+      );
+
+      Alert.alert(
+        "Submission Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to submit your report."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView
@@ -145,9 +140,8 @@ export default function ReviewIncidentScreen() {
         <ScreenHeader title="Review Your Report" />
 
         <Text className="mt-2 text-sm leading-5 text-app-muted">
-          Please verify
-          the details before
-          submitting.
+          Please verify the details
+          before submitting.
         </Text>
 
         <View className="mt-6 rounded-3xl border border-app-border bg-white p-5">
@@ -166,9 +160,7 @@ export default function ReviewIncidentScreen() {
           </Text>
 
           <Text className="mt-2 text-sm leading-6 text-app-text">
-            {
-              draft.description
-            }
+            {draft.description}
           </Text>
         </View>
 
@@ -239,18 +231,17 @@ export default function ReviewIncidentScreen() {
             </Text>
           </View>
 
-          {draft.evidence
-            .length === 0 ? (
+          {draft.evidence.length ===
+          0 ? (
             <Text className="mt-3 text-sm text-app-muted">
-              No evidence
-              photos attached.
+              No evidence photos
+              attached.
             </Text>
           ) : (
             <>
               <Text className="mt-3 text-sm text-app-muted">
                 {
-                  draft
-                    .evidence
+                  draft.evidence
                     .length
                 }{" "}
                 {draft.evidence
@@ -296,14 +287,12 @@ export default function ReviewIncidentScreen() {
           />
 
           <Text className="ml-3 flex-1 text-xs leading-5 text-app-muted">
-            Your report will
-            be submitted for
-            review. Evidence
-            files are stored
-            privately and are
-            not included in
-            the public nearby
-            incident feed.
+            Your report will be
+            submitted for review.
+            Evidence files are stored
+            privately and are not
+            included in the public
+            nearby incident feed.
           </Text>
         </View>
 

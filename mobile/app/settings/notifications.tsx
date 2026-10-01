@@ -15,6 +15,12 @@ import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from "../../src/services/notificationPreferenceService";
+import {
+  registerForPushNotificationsAsync,
+  registerPushTokenWithBackend,
+} from "../../src/services/notificationService";
+import { updateMyLocation } from "../../src/services/locationService";
+
 
 export default function NotificationPreferencesScreen() {
   const [nearbyAlerts, setNearbyAlerts] = useState(false);
@@ -39,7 +45,30 @@ export default function NotificationPreferencesScreen() {
     }
   }
 
-  loadPreferences();
+    loadPreferences();
+  }, []);
+
+
+useEffect(() => {
+  async function registerNotifications() {
+    try {
+      const token = await registerForPushNotificationsAsync();
+
+      console.log("EXPO PUSH TOKEN:", token);
+
+      await registerPushTokenWithBackend(token);
+
+      console.log("Push token registered with backend");
+
+      await updateMyLocation();
+
+      console.log("User location updated");
+    } catch (error) {
+      console.error("Notification registration failed:", error);
+    }
+  }
+
+  registerNotifications();
 }, []);
 
   return (

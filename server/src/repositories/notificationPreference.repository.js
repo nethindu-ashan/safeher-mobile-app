@@ -1,7 +1,11 @@
 import prisma from "../config/prisma.js";
 
-export async function getNotificationPreferences() {
-  return await prisma.notificationPreference.findFirst();
+export async function getNotificationPreferences(userId) {
+  return await prisma.notificationPreference.findUnique({
+    where: {
+      userId,
+    },
+  });
 }
 
 export async function createNotificationPreferences(data) {
@@ -10,9 +14,11 @@ export async function createNotificationPreferences(data) {
   });
 }
 
-export async function updateNotificationPreferences(id, data) {
+export async function updateNotificationPreferences(userId, data) {
   return await prisma.notificationPreference.update({
-    where: { id },
+    where: {
+      userId,
+    },
     data,
   });
 }

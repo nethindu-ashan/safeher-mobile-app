@@ -4,11 +4,12 @@ import {
   updateNotificationPreferences,
 } from "../repositories/notificationPreference.repository.js";
 
-export async function getPreferences() {
-  let preferences = await getNotificationPreferences();
+export async function getPreferences(userId) {
+  let preferences = await getNotificationPreferences(userId);
 
   if (!preferences) {
     preferences = await createNotificationPreferences({
+      userId,
       nearbyAlerts: true,
       emergencyAlerts: true,
       communityUpdates: true,
@@ -18,12 +19,15 @@ export async function getPreferences() {
   return preferences;
 }
 
-export async function savePreferences(data) {
-  const existing = await getNotificationPreferences();
+export async function savePreferences(userId, data) {
+  const existing = await getNotificationPreferences(userId);
 
   if (!existing) {
-    return await createNotificationPreferences(data);
+    return await createNotificationPreferences({
+      userId,
+      ...data,
+    });
   }
 
-  return await updateNotificationPreferences(existing.id, data);
+  return await updateNotificationPreferences(userId, data);
 }

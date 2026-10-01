@@ -5,13 +5,16 @@ import {
 
 export async function getNotificationPreferences(req, res) {
   try {
-    const preferences = await getPreferences();
+    const preferences = await getPreferences(req.user.id);
 
-    res.status(200).json(preferences);
+    return res.status(200).json(preferences);
   } catch (error) {
-    console.error("Error fetching notification preferences:", error);
+    console.error(
+      "Error fetching notification preferences:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to fetch notification preferences",
     });
   }
@@ -31,21 +34,28 @@ export async function updateNotificationPreferences(req, res) {
       typeof communityUpdates !== "boolean"
     ) {
       return res.status(400).json({
-        message: "All notification preferences must be boolean values",
+        message:
+          "All notification preferences must be boolean values",
       });
     }
 
-    const preferences = await savePreferences({
-      nearbyAlerts,
-      emergencyAlerts,
-      communityUpdates,
-    });
+    const preferences = await savePreferences(
+      req.user.id,
+      {
+        nearbyAlerts,
+        emergencyAlerts,
+        communityUpdates,
+      }
+    );
 
-    res.status(200).json(preferences);
+    return res.status(200).json(preferences);
   } catch (error) {
-    console.error("Error updating notification preferences:", error);
+    console.error(
+      "Error updating notification preferences:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to update notification preferences",
     });
   }

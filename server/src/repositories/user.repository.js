@@ -38,3 +38,45 @@ export async function updateUserProfile(id, data) {
     data,
   });
 }
+
+export async function findUsersNearLocation(
+  latitude,
+  longitude,
+  radiusKm
+) {
+  const users = await prisma.userProfile.findMany({
+    where: {
+      latitude: {
+        not: null,
+      },
+      longitude: {
+        not: null,
+      },
+    },
+    include: {
+      notificationPreference: true,
+      pushTokens: true,
+    },
+  });
+
+  return users.filter((user) => {
+    const dLatitude =
+      ((user.latitude - latitude) * Math.PI) / 180;
+
+    const dLongitude =
+      ((user.longitude - longitude) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLatitude / 2) ** 2 +
+      Math.cos((latitude * Math.PI) / 180) *
+        Math.cos((user.latitude * Math.PI) / 180) *
+        Math.sin(dLongitude / 2) ** 2;
+
+    const c =
+      2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const distanceKm = 6371 * c;
+
+    return distanceKm <= radiusKm;
+  });
+}

@@ -52,13 +52,19 @@ export async function createIncident(
     );
   }
 
+  console.log(
+    "CREATE INCIDENT PAYLOAD:",
+    payload
+  );
+
   return apiRequest<CreateIncidentResponse>(
     "/api/incidents",
     {
       method: "POST",
-      body: JSON.stringify(
-        payload
-      ),
+      body:
+        JSON.stringify(
+          payload
+        ),
     }
   );
 }

@@ -54,6 +54,14 @@ export async function updateCurrentUserProfile(
       data.phone.trim() || null;
   }
 
+  if (
+  typeof data.latitude === "number" &&
+  typeof data.longitude === "number"
+  ) {
+  updateData.latitude = data.latitude;
+  updateData.longitude = data.longitude;
+  }
+
   return updateUserProfile(
     userId,
     updateData
