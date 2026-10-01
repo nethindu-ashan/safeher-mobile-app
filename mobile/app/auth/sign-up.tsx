@@ -1,36 +1,84 @@
 import { Ionicons } from "@expo/vector-icons";
+
+import {
+  Raleway_400Regular,
+  Raleway_500Medium,
+  Raleway_600SemiBold,
+  Raleway_700Bold,
+  Raleway_800ExtraBold,
+  useFonts,
+} from "@expo-google-fonts/raleway";
+
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  COLORS,
-  GRADIENTS,
-} from "../../src/constants/theme";
-
+import { COLORS } from "../../src/constants/theme";
 import { signUp } from "../../src/services/authService";
 
+const logo = require(
+  "../../assets/images/logo/safeher-logo.png"
+);
+
+const signupHero = require(
+  "../../assets/images/auth/signup-hero.png"
+);
+
+const BACKGROUND = "#FFFBFD";
+const BORDER = "#EDE6F0";
+const SOFT_PURPLE = "#F5F0FF";
+const INPUT_BACKGROUND = "#FFFFFF";
+const MUTED = "#8A8192";
+
 export default function SignUpScreen() {
+  const { height } = useWindowDimensions();
+
+const compact = height < 780;
+
+// Increased banner height
+const heroHeight = compact ? 155 : 175;
+
+const inputHeight = compact ? 47 : 50;
+
+  const [fontsLoaded] = useFonts({
+    Raleway_400Regular,
+    Raleway_500Medium,
+    Raleway_600SemiBold,
+    Raleway_700Bold,
+    Raleway_800ExtraBold,
+  });
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
   const [
     showConfirmPassword,
@@ -39,9 +87,31 @@ export default function SignUpScreen() {
 
   const [loading, setLoading] = useState(false);
 
+  const [
+    nameFocused,
+    setNameFocused,
+  ] = useState(false);
+
+  const [
+    emailFocused,
+    setEmailFocused,
+  ] = useState(false);
+
+  const [
+    passwordFocused,
+    setPasswordFocused,
+  ] = useState(false);
+
+  const [
+    confirmFocused,
+    setConfirmFocused,
+  ] = useState(false);
+
   const validateForm = () => {
     const cleanName = fullName.trim();
-    const cleanEmail = email.trim().toLowerCase();
+
+    const cleanEmail =
+      email.trim().toLowerCase();
 
     if (!cleanName) {
       Alert.alert(
@@ -122,7 +192,9 @@ export default function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -142,15 +214,6 @@ export default function SignUpScreen() {
         );
       }
 
-      /*
-       * Email confirmation is enabled.
-       *
-       * Supabase creates the user first,
-       * then sends the OTP verification code.
-       *
-       * Usually there is no authenticated session
-       * until the OTP is successfully verified.
-       */
       if (!data.session) {
         router.replace({
           pathname: "/auth/verify-email",
@@ -162,10 +225,6 @@ export default function SignUpScreen() {
         return;
       }
 
-      /*
-       * This is only a fallback in case
-       * email confirmation is disabled.
-       */
       Alert.alert(
         "Account created",
         "Your SafeHer account has been created successfully.",
@@ -213,15 +272,39 @@ export default function SignUpScreen() {
     }
   };
 
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: BACKGROUND,
+        }}
+      />
+    );
+  }
+
   return (
     <SafeAreaView
+      edges={[
+        "top",
+        "bottom",
+      ]}
       style={{
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: BACKGROUND,
       }}
     >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={
+          COLORS.primaryDark
+        }
+      />
+
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{
+          flex: 1,
+        }}
         behavior={
           Platform.OS === "ios"
             ? "padding"
@@ -229,150 +312,481 @@ export default function SignUpScreen() {
         }
       >
         <ScrollView
-          className="flex-1"
+          style={{
+            flex: 1,
+          }}
+          showsVerticalScrollIndicator={
+            false
+          }
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             flexGrow: 1,
-            paddingHorizontal: 24,
-            paddingBottom: 40,
+            paddingBottom:
+              compact ? 14 : 20,
           }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
-          <View className="pt-3">
-            <Pressable
-              onPress={() => router.back()}
-              className="h-11 w-11 items-center justify-center rounded-full bg-white active:opacity-70"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={24}
-                color={COLORS.text}
-              />
-            </Pressable>
-          </View>
-
-          {/* Header */}
-          <View className="mt-7">
+          <ImageBackground
+            source={signupHero}
+            resizeMode="cover"
+            style={{
+              width: "100%",
+              height: heroHeight,
+            }}
+          >
             <LinearGradient
-              colors={GRADIENTS.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+              colors={[
+                "rgba(69,25,150,0.88)",
+                "rgba(139,61,255,0.48)",
+                "rgba(236,72,153,0.04)",
+              ]}
+              start={{
+                x: 0,
+                y: 0.5,
+              }}
+              end={{
+                x: 1,
+                y: 0.5,
+              }}
               style={{
-                width: 60,
-                height: 60,
-                borderRadius: 19,
-                alignItems: "center",
-                justifyContent: "center",
+                flex: 1,
+                paddingHorizontal: 24,
+                paddingTop: 10,
+                paddingBottom: 13,
               }}
             >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={31}
-                color="#FFFFFF"
-              />
-            </LinearGradient>
+              <Pressable
+                onPress={() =>
+                  router.back()
+                }
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 36,
+                  height: 36,
 
-            <Text className="mt-6 text-3xl font-bold text-app-text">
+                  borderRadius: 18,
+
+                  alignItems: "center",
+                  justifyContent:
+                    "center",
+
+                  backgroundColor:
+                    "rgba(0,0,0,0.18)",
+
+                  opacity:
+                    pressed ? 0.65 : 1,
+                })}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </Pressable>
+
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent:
+                    "flex-end",
+                }}
+              >
+                <View
+                  style={{
+                    width: "66%",
+                  }}
+                >
+                  <Image
+                    source={logo}
+                    resizeMode="contain"
+                    style={{
+                      width: 96,
+                      height: 31,
+                      marginBottom: 4,
+
+                      alignSelf:
+                        "flex-start",
+                    }}
+                  />
+
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+
+                      fontFamily:
+                        "Raleway_800ExtraBold",
+
+                      fontSize:
+                        compact
+                          ? 18
+                          : 19,
+
+                      lineHeight:
+                        compact
+                          ? 20
+                          : 22,
+                    }}
+                  >
+                    Your safer journey
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+
+                      fontFamily:
+                        "Raleway_800ExtraBold",
+
+                      fontSize:
+                        compact
+                          ? 18
+                          : 19,
+
+                      lineHeight:
+                        compact
+                          ? 20
+                          : 22,
+                    }}
+                  >
+                    starts here.
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </ImageBackground>
+
+          <View
+            style={{
+              paddingHorizontal: 24,
+
+              paddingTop:
+  compact ? 28 : 34,
+            }}
+          >
+            <Text
+              style={{
+                color: COLORS.text,
+
+                fontFamily:
+                  "Raleway_800ExtraBold",
+
+                fontSize:
+                  compact ? 21 : 23,
+
+                lineHeight:
+                  compact ? 25 : 28,
+
+                letterSpacing: -0.3,
+              }}
+            >
               Create your account
             </Text>
 
-            <Text className="mt-2 text-base leading-6 text-app-muted">
-              Create a SafeHer account to manage
-              your profile, notification preferences
-              and personal safety information.
-            </Text>
-          </View>
+            <Text
+              style={{
+                marginTop: 3,
 
-          {/* Form */}
-          <View className="mt-8 gap-5">
-            {/* Full Name */}
-            <View>
-              <Text className="mb-2 text-sm font-semibold text-app-text">
+                color: MUTED,
+
+                fontFamily:
+                  "Raleway_400Regular",
+
+                fontSize: 11,
+                lineHeight: 15,
+              }}
+            >
+              Set up your SafeHer account in a few quick steps.
+            </Text>
+
+            <View
+              style={{
+                marginTop:
+                  compact ? 15 : 18,
+              }}
+            >
+              <Text
+                style={{
+                  marginBottom: 5,
+
+                  color: COLORS.text,
+
+                  fontFamily:
+                    "Raleway_600SemiBold",
+
+                  fontSize: 11.3,
+                }}
+              >
                 Full name
               </Text>
 
-              <View className="flex-row items-center rounded-2xl border border-app-border bg-white px-4">
+              <View
+                style={{
+                  height: inputHeight,
+
+                  flexDirection: "row",
+
+                  alignItems: "center",
+
+                  paddingHorizontal: 14,
+
+                  borderWidth: 1.2,
+
+                  borderColor:
+                    nameFocused
+                      ? COLORS.primary
+                      : BORDER,
+
+                  borderRadius: 15,
+
+                  backgroundColor:
+                    INPUT_BACKGROUND,
+                }}
+              >
                 <Ionicons
                   name="person-outline"
-                  size={20}
-                  color={COLORS.textSecondary}
+                  size={18}
+                  color={
+                    nameFocused
+                      ? COLORS.primary
+                      : MUTED
+                  }
                 />
 
                 <TextInput
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="Enter your full name"
-                  placeholderTextColor={
-                    COLORS.textSecondary
+                  onFocus={() =>
+                    setNameFocused(true)
                   }
+                  onBlur={() =>
+                    setNameFocused(false)
+                  }
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#AAA1AE"
                   autoCapitalize="words"
                   autoCorrect={false}
-                  className="ml-3 flex-1 py-4 text-base text-app-text"
+                  style={{
+                    flex: 1,
+                    height: "100%",
+
+                    marginLeft: 10,
+
+                    color: COLORS.text,
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 12.3,
+                  }}
                 />
               </View>
             </View>
 
-            {/* Email */}
-            <View>
-              <Text className="mb-2 text-sm font-semibold text-app-text">
+            <View
+              style={{
+                marginTop:
+                  compact ? 9 : 11,
+              }}
+            >
+              <Text
+                style={{
+                  marginBottom: 5,
+
+                  color: COLORS.text,
+
+                  fontFamily:
+                    "Raleway_600SemiBold",
+
+                  fontSize: 11.3,
+                }}
+              >
                 Email address
               </Text>
 
-              <View className="flex-row items-center rounded-2xl border border-app-border bg-white px-4">
+              <View
+                style={{
+                  height: inputHeight,
+
+                  flexDirection: "row",
+
+                  alignItems: "center",
+
+                  paddingHorizontal: 14,
+
+                  borderWidth: 1.2,
+
+                  borderColor:
+                    emailFocused
+                      ? COLORS.primary
+                      : BORDER,
+
+                  borderRadius: 15,
+
+                  backgroundColor:
+                    INPUT_BACKGROUND,
+                }}
+              >
                 <Ionicons
                   name="mail-outline"
-                  size={20}
-                  color={COLORS.textSecondary}
+                  size={18}
+                  color={
+                    emailFocused
+                      ? COLORS.primary
+                      : MUTED
+                  }
                 />
 
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="name@example.com"
-                  placeholderTextColor={
-                    COLORS.textSecondary
+                  onFocus={() =>
+                    setEmailFocused(true)
                   }
+                  onBlur={() =>
+                    setEmailFocused(false)
+                  }
+                  placeholder="name@example.com"
+                  placeholderTextColor="#AAA1AE"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="ml-3 flex-1 py-4 text-base text-app-text"
+                  style={{
+                    flex: 1,
+                    height: "100%",
+
+                    marginLeft: 10,
+
+                    color: COLORS.text,
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 12.3,
+                  }}
                 />
               </View>
             </View>
 
-            {/* Password */}
-            <View>
-              <Text className="mb-2 text-sm font-semibold text-app-text">
-                Password
-              </Text>
+            <View
+              style={{
+                marginTop:
+                  compact ? 9 : 11,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
 
-              <View className="flex-row items-center rounded-2xl border border-app-border bg-white px-4">
+                  alignItems: "center",
+
+                  justifyContent:
+                    "space-between",
+
+                  marginBottom: 5,
+                }}
+              >
+                <Text
+                  style={{
+                    color: COLORS.text,
+
+                    fontFamily:
+                      "Raleway_600SemiBold",
+
+                    fontSize: 11.3,
+                  }}
+                >
+                  Password
+                </Text>
+
+                <Text
+                  style={{
+                    color: MUTED,
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 9.2,
+                  }}
+                >
+                  8+ characters
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  height: inputHeight,
+
+                  flexDirection: "row",
+
+                  alignItems: "center",
+
+                  paddingHorizontal: 14,
+
+                  borderWidth: 1.2,
+
+                  borderColor:
+                    passwordFocused
+                      ? COLORS.primary
+                      : BORDER,
+
+                  borderRadius: 15,
+
+                  backgroundColor:
+                    INPUT_BACKGROUND,
+                }}
+              >
                 <Ionicons
                   name="lock-closed-outline"
-                  size={20}
-                  color={COLORS.textSecondary}
+                  size={18}
+                  color={
+                    passwordFocused
+                      ? COLORS.primary
+                      : MUTED
+                  }
                 />
 
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Minimum 8 characters"
-                  placeholderTextColor={
-                    COLORS.textSecondary
+                  onFocus={() =>
+                    setPasswordFocused(
+                      true
+                    )
                   }
-                  secureTextEntry={!showPassword}
+                  onBlur={() =>
+                    setPasswordFocused(
+                      false
+                    )
+                  }
+                  placeholder="Create a password"
+                  placeholderTextColor="#AAA1AE"
+                  secureTextEntry={
+                    !showPassword
+                  }
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="ml-3 flex-1 py-4 text-base text-app-text"
+                  style={{
+                    flex: 1,
+                    height: "100%",
+
+                    marginLeft: 10,
+
+                    color: COLORS.text,
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 12.3,
+                  }}
                 />
 
                 <Pressable
                   onPress={() =>
                     setShowPassword(
-                      (current) => !current
+                      (current) =>
+                        !current
                     )
                   }
+                  hitSlop={10}
                 >
                   <Ionicons
                     name={
@@ -380,47 +794,113 @@ export default function SignUpScreen() {
                         ? "eye-off-outline"
                         : "eye-outline"
                     }
-                    size={21}
-                    color={COLORS.textSecondary}
+                    size={19}
+                    color={MUTED}
                   />
                 </Pressable>
               </View>
             </View>
 
-            {/* Confirm Password */}
-            <View>
-              <Text className="mb-2 text-sm font-semibold text-app-text">
+            <View
+              style={{
+                marginTop:
+                  compact ? 9 : 11,
+                  marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  marginBottom: 5,
+
+                  color: COLORS.text,
+
+                  fontFamily:
+                    "Raleway_600SemiBold",
+
+                  fontSize: 11.3,
+                }}
+              >
                 Confirm password
               </Text>
 
-              <View className="flex-row items-center rounded-2xl border border-app-border bg-white px-4">
+              <View
+                style={{
+                  height: inputHeight,
+
+                  flexDirection: "row",
+
+                  alignItems: "center",
+
+                  paddingHorizontal: 14,
+
+                  borderWidth: 1.2,
+
+                  borderColor:
+                    confirmFocused
+                      ? COLORS.primary
+                      : BORDER,
+
+                  borderRadius: 15,
+
+                  backgroundColor:
+                    INPUT_BACKGROUND,
+                }}
+              >
                 <Ionicons
                   name="lock-closed-outline"
-                  size={20}
-                  color={COLORS.textSecondary}
+                  size={18}
+                  color={
+                    confirmFocused
+                      ? COLORS.primary
+                      : MUTED
+                  }
                 />
 
                 <TextInput
                   value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="Enter your password again"
-                  placeholderTextColor={
-                    COLORS.textSecondary
+                  onChangeText={
+                    setConfirmPassword
                   }
+                  onFocus={() =>
+                    setConfirmFocused(
+                      true
+                    )
+                  }
+                  onBlur={() =>
+                    setConfirmFocused(
+                      false
+                    )
+                  }
+                  placeholder="Repeat your password"
+                  placeholderTextColor="#AAA1AE"
                   secureTextEntry={
                     !showConfirmPassword
                   }
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="ml-3 flex-1 py-4 text-base text-app-text"
+                  style={{
+                    flex: 1,
+                    height: "100%",
+
+                    marginLeft: 10,
+
+                    color: COLORS.text,
+
+                    fontFamily:
+                      "Raleway_500Medium",
+
+                    fontSize: 12.3,
+                  }}
                 />
 
                 <Pressable
                   onPress={() =>
                     setShowConfirmPassword(
-                      (current) => !current
+                      (current) =>
+                        !current
                     )
                   }
+                  hitSlop={10}
                 >
                   <Ionicons
                     name={
@@ -428,93 +908,250 @@ export default function SignUpScreen() {
                         ? "eye-off-outline"
                         : "eye-outline"
                     }
-                    size={21}
-                    color={COLORS.textSecondary}
+                    size={19}
+                    color={MUTED}
                   />
                 </Pressable>
               </View>
             </View>
-          </View>
-
-          {/* Password Information */}
-          <View className="mt-5 flex-row rounded-2xl bg-light-purple p-4">
-            <Ionicons
-              name="information-circle-outline"
-              size={21}
-              color={COLORS.primary}
-            />
-
-            <Text className="ml-3 flex-1 text-xs leading-5 text-app-muted">
-              Use at least 8 characters for your password.
-              Never share your password or verification
-              code with another person.
-            </Text>
-          </View>
-
-          {/* Create Account */}
-          <Pressable
-            onPress={handleSignUp}
-            disabled={loading}
-            className="mt-7 overflow-hidden rounded-2xl active:opacity-80"
-          >
-            <LinearGradient
-              colors={GRADIENTS.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{
-                minHeight: 56,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 16,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator
-                  color="#FFFFFF"
-                />
-              ) : (
-                <Text className="text-base font-bold text-white">
-                  Create Account
-                </Text>
-              )}
-            </LinearGradient>
-          </Pressable>
-
-          {/* Existing Account */}
-          <View className="mt-7 flex-row justify-center">
-            <Text className="text-sm text-app-muted">
-              {"Already have an account? "}
-            </Text>
 
             <Pressable
-              onPress={() =>
-                router.push("/auth/sign-in")
-              }
+              onPress={handleSignUp}
+              disabled={loading}
+              style={({ pressed }) => ({
+                marginTop:
+                  compact ? 22 : 25,
+
+                borderRadius: 16,
+
+                overflow: "hidden",
+
+                opacity:
+                  loading
+                    ? 0.62
+                    : pressed
+                    ? 0.86
+                    : 1,
+              })}
             >
-              <Text className="text-sm font-bold text-primary">
-                Sign In
-              </Text>
+              <LinearGradient
+                colors={[
+                  COLORS.primaryDark,
+                  COLORS.primary,
+                  COLORS.pink,
+                ]}
+                start={{
+                  x: 0,
+                  y: 0.5,
+                }}
+                end={{
+                  x: 1,
+                  y: 0.5,
+                }}
+                style={{
+                  height:
+                    compact ? 49 : 52,
+
+                  borderRadius: 16,
+
+                  alignItems: "center",
+
+                  justifyContent:
+                    "center",
+                }}
+              >
+                {loading ? (
+                  <ActivityIndicator
+                    color="#FFFFFF"
+                  />
+                ) : (
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+
+                      fontFamily:
+                        "Raleway_700Bold",
+
+                      fontSize: 13,
+                    }}
+                  >
+                    Create Account
+                  </Text>
+                )}
+              </LinearGradient>
             </Pressable>
+
+            <View
+              style={{
+                marginTop:
+                  compact ? 14 : 17,
+
+                flexDirection: "row",
+
+                alignItems: "center",
+
+                justifyContent:
+                  "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: MUTED,
+
+                  fontFamily:
+                    "Raleway_400Regular",
+
+                  fontSize: 10.5,
+                }}
+              >
+                Already have an account?{" "}
+              </Text>
+
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    "/auth/sign-in"
+                  )
+                }
+                hitSlop={6}
+              >
+                <Text
+                  style={{
+                    color:
+                      COLORS.primary,
+
+                    fontFamily:
+                      "Raleway_700Bold",
+
+                    fontSize: 10.5,
+                  }}
+                >
+                  Sign In
+                </Text>
+              </Pressable>
+            </View>
+
+            <View
+              style={{
+                marginTop:
+                  compact ? 11 : 14,
+
+                flexDirection: "row",
+
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  height: 1,
+
+                  backgroundColor: BORDER,
+                }}
+              />
+
+              <Text
+                style={{
+                  marginHorizontal: 10,
+
+                  color: "#A69DAA",
+
+                  fontFamily:
+                    "Raleway_500Medium",
+
+                  fontSize: 8.8,
+                }}
+              >
+                or
+              </Text>
+
+              <View
+                style={{
+                  flex: 1,
+                  height: 1,
+
+                  backgroundColor: BORDER,
+                }}
+              />
+            </View>
+
+            <View
+              style={{
+                alignItems: "center",
+              }}
+            >
+              <Pressable
+                onPress={() =>
+                  router.replace("/")
+                }
+                style={({ pressed }) => ({
+                  width: "68%",
+
+                  minHeight:
+                    compact ? 42 : 44,
+
+                  marginTop:
+                    compact ? 10 : 12,
+
+                  borderRadius: 14,
+
+                  backgroundColor:
+                    SOFT_PURPLE,
+
+                  flexDirection: "row",
+
+                  alignItems: "center",
+
+                  justifyContent:
+                    "center",
+
+                  opacity:
+                    pressed
+                      ? 0.65
+                      : 1,
+                })}
+              >
+             
+                <Text
+                  style={{
+                   
+
+                    color:
+                      COLORS.primary,
+
+                    fontFamily:
+                      "Raleway_700Bold",
+
+                    fontSize: 10.5,
+                  }}
+                >
+                  Continue as Guest
+                </Text>
+              </Pressable>
+
+              <Text
+                style={{
+                  maxWidth: 300,
+
+                  marginTop: 6,
+
+                  paddingHorizontal: 12,
+
+                  color: "#A69DAA",
+
+                  fontFamily:
+                    "Raleway_400Regular",
+
+                  fontSize: 8.4,
+                  lineHeight: 12,
+
+                  textAlign: "center",
+                }}
+              >
+                Emergency safety features remain available without an account.
+              </Text>
+            </View>
           </View>
-
-          {/* Guest */}
-          <Pressable
-            onPress={() =>
-              router.replace("/")
-            }
-            className="mt-6 items-center"
-          >
-            <Text className="font-semibold text-app-muted">
-              Continue as Guest
-            </Text>
-          </Pressable>
-
-          {/* Safety Message */}
-          <Text className="mt-7 text-center text-xs leading-5 text-app-muted">
-            Critical SafeHer safety features remain
-            available without creating an account.
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
