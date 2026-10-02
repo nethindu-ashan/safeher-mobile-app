@@ -11,7 +11,7 @@ import {
 import MapView, {
   MapPressEvent,
   Marker,
-  PROVIDER_GOOGLE,
+  //PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
 
@@ -168,7 +168,7 @@ export default function SelectLocationScreen() {
         {/* Google Map */}
         <View className="flex-1 overflow-hidden rounded-2xl border border-app-border">
           <MapView
-            provider={PROVIDER_GOOGLE}
+            //provider={PROVIDER_GOOGLE}
             style={{
               flex: 1,
             }}

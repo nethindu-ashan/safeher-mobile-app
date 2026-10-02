@@ -25,6 +25,8 @@ const searchRoute = async (req, res) => {
       startLatitude,
       startLongitude,
       destination,
+      destinationLatitude,
+      destinationLongitude,
     } = req.routeSearchData;
 
 
@@ -35,7 +37,9 @@ const searchRoute = async (req, res) => {
       startLocation,
       startLatitude,
       startLongitude,
-      destination
+      destination,
+      destinationLatitude,
+      destinationLongitude
     );
 
 
@@ -44,14 +48,19 @@ const searchRoute = async (req, res) => {
     */
     return res.status(200).json({
       success: true,
-      message: "Available routes retrieved successfully.",
+      message:
+        "Available routes retrieved successfully.",
 
       data: {
         startLocation:
           startLocation || "Current Location",
 
-        destination,
+        destination:
+          destination ||
+          `${destinationLatitude}, ${destinationLongitude}`,
+
         routeCount: routes.length,
+
         routes,
       },
     });
@@ -65,7 +74,8 @@ const searchRoute = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to search routes.",
+      message:
+        "Unable to search routes.",
     });
   }
 };

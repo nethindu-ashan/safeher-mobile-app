@@ -1,8 +1,6 @@
 import express from "express";
 
 import {
-  getAllSupportServices,
-  getSupportServiceById,
   getNearbySupportServices,
   getGooglePlaceDetails,
 } from "../controllers/support.controller.js";
@@ -10,21 +8,9 @@ import {
 import {
   validateNearbySupportQuery,
   validatePlaceDetailsRequest,
-  validateSupportServiceId,
 } from "../validators/support.validator.js";
 
 const router = express.Router();
-
-
-// ============================================================
-// SAFEHER DATABASE SERVICES
-// ============================================================
-
-// GET /api/support
-router.get(
-  "/",
-  getAllSupportServices
-);
 
 
 // ============================================================
@@ -48,18 +34,6 @@ router.get(
   "/place/:placeId",
   validatePlaceDetailsRequest,
   getGooglePlaceDetails
-);
-
-
-// ============================================================
-// DATABASE SERVICE DETAILS
-// ============================================================
-
-// This dynamic route MUST remain last.
-router.get(
-  "/:id",
-  validateSupportServiceId,
-  getSupportServiceById
 );
 
 
