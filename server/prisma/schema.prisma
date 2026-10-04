@@ -6,25 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
-  USER
-  ADMIN
-}
-
-model UserProfile {
-  id        String   @id @db.Uuid
-  fullName  String   @map("full_name")
-  email     String   @unique
-  phone     String?
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  incidents       Incident[]
-  trustedContacts TrustedContact[]
-
-  @@map("user_profiles")
-}
 
 model Incident {
   id               String   @id @default(uuid()) @db.Uuid
@@ -104,10 +85,11 @@ model UserProfile {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  incidents Incident[]
+  incidents       Incident[]
+  trustedContacts TrustedContact[]
 
   notificationPreference NotificationPreference?
-  pushTokens PushToken[]
+  pushTokens             PushToken[]
 
   @@map("user_profiles")
 }

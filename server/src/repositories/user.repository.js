@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { calculateDistance } from "../utils/distance.js";
 
 export async function findUserProfileById(id) {
   return prisma.userProfile.findUnique({
@@ -60,23 +61,13 @@ export async function findUsersNearLocation(
   });
 
   return users.filter((user) => {
-    const dLatitude =
-      ((user.latitude - latitude) * Math.PI) / 180;
+  const distanceKm = calculateDistance(
+    latitude,
+    longitude,
+    user.latitude,
+    user.longitude
+  );
 
-    const dLongitude =
-      ((user.longitude - longitude) * Math.PI) / 180;
-
-    const a =
-      Math.sin(dLatitude / 2) ** 2 +
-      Math.cos((latitude * Math.PI) / 180) *
-        Math.cos((user.latitude * Math.PI) / 180) *
-        Math.sin(dLongitude / 2) ** 2;
-
-    const c =
-      2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const distanceKm = 6371 * c;
-
-    return distanceKm <= radiusKm;
-  });
+  return distanceKm <= radiusKm;
+});
 }
