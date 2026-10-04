@@ -29,6 +29,7 @@ import {
 
 import {
   compareRouteSafety,
+  getRouteSafetyIncidents,
   RouteComparison,
 } from "../../src/services/routeSafety.service";
 
@@ -79,6 +80,10 @@ export default function RouteScreen() {
   // Route safety comparison results.
   const [routeComparisons, setRouteComparisons] =
     useState<RouteComparison[]>([]);
+
+  // Route incident counts.
+  const [routeIncidentCounts, setRouteIncidentCounts] =
+    useState<Record<string, number>>({});
 
   // Safety comparison loading.
   const [isComparisonLoading, setIsComparisonLoading] =
@@ -229,6 +234,7 @@ export default function RouteScreen() {
     setErrorMessage("");
     setRoutes([]);
     setRouteComparisons([]);
+    setRouteIncidentCounts({});
     setComparisonError("");
     setRecommendedRouteId(null);
 
@@ -267,6 +273,57 @@ export default function RouteScreen() {
         response.data.routes || [];
 
       setRoutes(availableRoutes);
+
+      /*
+      * Get safety incident count for every route.
+      * This also works when there is only ONE route.
+      */
+      try {
+        const incidentCountResults =
+          await Promise.all(
+            availableRoutes.map(async (route) => {
+              try {
+                const safetyResponse =
+                  await getRouteSafetyIncidents(
+                    route.encodedPolyline,
+                    0.5,
+                    30
+                  );
+
+                return {
+                  id: route.id,
+                  count:
+                    safetyResponse.data.incidentCount ??
+                    safetyResponse.data.incidents?.length ??
+                    0,
+                };
+              } catch (error) {
+                console.error(
+                  `Unable to load incidents for route ${route.id}:`,
+                  error
+                );
+
+                return {
+                  id: route.id,
+                  count: 0,
+                };
+              }
+            })
+          );
+
+        const counts: Record<string, number> = {};
+
+        incidentCountResults.forEach((result) => {
+          counts[result.id] = result.count;
+        });
+
+        setRouteIncidentCounts(counts);
+      } catch (error) {
+        console.error(
+          "Route incident count error:",
+          error
+        );
+      }
 
       /*
        * Compare route safety only
@@ -656,143 +713,116 @@ export default function RouteScreen() {
                       paddingBottom: 20,
                     }}
                   >
-                    {routes.map(
-                      (route) => (
-                        <AppCard
-                          key={route.id}
-                        >
+                    {[...routes]
+                      .sort((a, b) => {
+                        // Always keep the recommended route at the top.
+                        if (recommendedRouteId === a.id) return -1;
+                        if (recommendedRouteId === b.id) return 1;
+                        return 0;
+                      })
+                      .map((route) => {
+                        const comparison = routeComparisons.find(
+                          (item) => item.id === route.id
+                        );
 
-                          {/* Route name */}
+                        const isRecommended =
+                          recommendedRouteId === route.id;
 
-                          <View className="mb-3 flex-row items-center justify-between">
+                        const incidentCount =
+                          comparison?.incidentCount ??
+                          routeIncidentCounts[route.id] ??
+                          0;
 
-                            <Text className="flex-1 text-lg font-semibold text-app-text">
-                              {route.name}
-                            </Text>
-
-                            {recommendedRouteId ===
-                              route.id && (
-                              <View className="rounded-full bg-light-purple px-3 py-1">
-                                <Text className="text-xs font-semibold text-primary">
-                                  Recommended
-                                </Text>
-                              </View>
-                            )}
-
-                          </View>
-
-                          {/* Start → Destination */}
-
-                          <Text className="mb-4 text-sm text-app-text-secondary">
-                            Current Location
-                            {" → "}
-                            {route.destination}
-                          </Text>
-
-                          {/* Distance / Duration */}
-
-                          <View className="mb-4 flex-row">
-
-                            <View className="mr-8">
-                              <Text className="text-xs text-app-text-secondary">
-                                Distance
-                              </Text>
-
-                              <Text className="mt-1 text-base font-semibold text-app-text">
-                                {
-                                  route.distance
-                                }
-                              </Text>
-                            </View>
-
-                            <View>
-                              <Text className="text-xs text-app-text-secondary">
-                                Estimated Time
-                              </Text>
-
-                              <Text className="mt-1 text-base font-semibold text-app-text">
-                                {
-                                  route.duration
-                                }
-                              </Text>
-                            </View>
-
-                          </View>
-
-                          {/* Route safety */}
-
-                          {isComparisonLoading ? (
-                            <Text className="mb-4 text-sm text-app-text-secondary">
-                              Checking route safety...
-                            </Text>
-                          ) : (
-                            (() => {
-                              const comparison =
-                                routeComparisons.find(
-                                  (
-                                    item
-                                  ) =>
-                                    item.id ===
-                                    route.id
-                                );
-
-                              if (
-                                !comparison
-                              ) {
-                                return null;
-                              }
-
-                              return (
-                                <View className="mb-4 rounded-xl bg-light-purple p-3">
-
-                                  <Text className="text-sm font-semibold text-primary">
-                                    Route Safety
-                                  </Text>
-
-                                  <Text className="mt-1 text-sm text-app-text">
-                                    {
-                                      comparison.incidentCount
-                                    }{" "}
-                                    recent
-                                    report
-                                    {comparison.incidentCount !==
-                                    1
-                                      ? "s"
-                                      : ""}{" "}
-                                    near this
-                                    route
-                                  </Text>
-
-                                  {recommendedRouteId ===
-                                    route.id && (
-                                    <Text className="mt-1 text-xs font-medium text-primary">
-                                      Recommended based on fewer recent reports
-                                    </Text>
-                                  )}
-
-                                </View>
-                              );
-                            })()
-                          )}
-
-                          {/* Select route */}
-
+                        return (
                           <Pressable
-                            onPress={() =>
-                              handleSelectRoute(
-                                route
-                              )
-                            }
-                            className="rounded-full border border-primary py-3 active:opacity-70"
+                            key={route.id}
+                            onPress={() => handleSelectRoute(route)}
+                            className="mb-4 active:opacity-80"
                           >
-                            <Text className="text-center font-semibold text-primary">
-                              Select Route
-                            </Text>
-                          </Pressable>
+                            <AppCard>
+                              {/* Top row */}
+                              <View className="flex-row items-center justify-between">
 
-                        </AppCard>
-                      )
-                    )}
+                                {/* Route label */}
+                                <View
+                                  className={`rounded-full px-3 py-1.5 ${
+                                    isRecommended
+                                      ? "bg-light-purple"
+                                      : "bg-gray-100"
+                                  }`}
+                                >
+                                  <Text
+                                    className={`text-xs font-semibold ${
+                                      isRecommended
+                                        ? "text-primary"
+                                        : "text-gray-700"
+                                    }`}
+                                  >
+                                    {isRecommended
+                                      ? "Recommended"
+                                      : route.name.replace(
+                                          "Alternative Route ",
+                                          "Alternative "
+                                        )}
+                                  </Text>
+                                </View>
+
+                                {/* Safety report count */}
+                                <View className="rounded-full bg-red-50 px-3 py-1.5">
+                                  <Text className="text-xs font-semibold text-red-500">
+                                    {incidentCount}{" "}
+                                    {incidentCount === 1
+                                      ? "report"
+                                      : "reports"}
+                                  </Text>
+                                </View>
+
+                              </View>
+
+                              {/* Route direction */}
+                              <Text className="mt-3 text-sm text-app-text-secondary">
+                                {route.startLocation} → {route.destination}
+                              </Text>
+
+                              {/* Distance and time */}
+                              <View className="mt-4 flex-row">
+
+                                {/* Distance */}
+                                <View className="flex-1">
+                                  <Text className="text-xs text-app-text-secondary">
+                                    Distance
+                                  </Text>
+
+                                  <Text className="mt-1 text-base font-semibold text-app-text">
+                                    {route.distance}
+                                  </Text>
+                                </View>
+
+                                {/* Estimated time */}
+                                <View className="flex-1">
+                                  <Text className="text-xs text-app-text-secondary">
+                                    Estimated Time
+                                  </Text>
+
+                                  <Text className="mt-1 text-base font-semibold text-app-text">
+                                    {route.duration}
+                                  </Text>
+                                </View>
+
+                                {/* Arrow */}
+                                <View className="items-center justify-center">
+                                  <View className="h-9 w-9 items-center justify-center rounded-full bg-light-purple">
+                                    <Text className="text-lg font-bold text-primary">
+                                      ›
+                                    </Text>
+                                  </View>
+                                </View>
+
+                              </View>
+                            </AppCard>
+                          </Pressable>
+                        );
+                      })}
 
                     {/* Comparison error */}
 
