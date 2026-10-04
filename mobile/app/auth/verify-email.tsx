@@ -21,10 +21,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StatusBar,
   Text,
   TextInput,
@@ -342,7 +339,7 @@ export default function VerifyEmailScreen() {
         }
       >
         <ScrollView
-          styl e={{
+          style={{
             flex: 1,
           }}
 
