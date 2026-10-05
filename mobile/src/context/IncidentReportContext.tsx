@@ -5,31 +5,34 @@ import {
   useState,
 } from "react";
 
-import { IncidentDraft } from "../types/incident";
+import type {
+  IncidentDraft,
+} from "../types/incident";
 
-type IncidentReportContextType = {
+interface IncidentReportContextType {
   draft: IncidentDraft;
-
   updateDraft: (
     values: Partial<IncidentDraft>
   ) => void;
-
   resetDraft: () => void;
-};
+}
 
-const createInitialDraft = (): IncidentDraft => ({
-  category: "",
-  description: "",
-  latitude: null,
-  longitude: null,
-  dateTime: new Date().toISOString(),
-  isAnonymous: true,
-});
+const createInitialDraft =
+  (): IncidentDraft => ({
+    category: "",
+    latitude: null,
+    longitude: null,
+    dateTime:
+      new Date().toISOString(),
+    description: "",
+    isAnonymous: true,
+    evidence: [],
+  });
 
 const IncidentReportContext =
-  createContext<IncidentReportContextType | undefined>(
-    undefined
-  );
+  createContext<
+    IncidentReportContextType | undefined
+  >(undefined);
 
 export function IncidentReportProvider({
   children,
@@ -37,7 +40,9 @@ export function IncidentReportProvider({
   children: ReactNode;
 }) {
   const [draft, setDraft] =
-    useState<IncidentDraft>(createInitialDraft());
+    useState<IncidentDraft>(
+      createInitialDraft()
+    );
 
   const updateDraft = (
     values: Partial<IncidentDraft>
@@ -49,7 +54,9 @@ export function IncidentReportProvider({
   };
 
   const resetDraft = () => {
-    setDraft(createInitialDraft());
+    setDraft(
+      createInitialDraft()
+    );
   };
 
   return (
@@ -66,11 +73,14 @@ export function IncidentReportProvider({
 }
 
 export function useIncidentReport() {
-  const context = useContext(IncidentReportContext);
+  const context =
+    useContext(
+      IncidentReportContext
+    );
 
   if (!context) {
     throw new Error(
-      "useIncidentReport must be used inside IncidentReportProvider"
+      "useIncidentReport must be used inside IncidentReportProvider."
     );
   }
 

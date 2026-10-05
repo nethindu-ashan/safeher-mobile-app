@@ -6,6 +6,7 @@ datasource db {
   provider = "postgresql"
 }
 
+
 model Incident {
   id               String   @id @default(uuid()) @db.Uuid
   category         String   @db.VarChar(100)
@@ -17,24 +18,29 @@ model Incident {
   status           String   @default("Pending Review") @db.VarChar(50)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  evidencePaths String[] @default([]) @map("evidence_paths")
+
+  userId String?      @map("user_id") @db.Uuid
+  user   UserProfile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
   @@map("incidents")
 }
 
-model SupportService {
+model TrustedContact {
   id           String   @id @default(uuid()) @db.Uuid
-  name         String   @db.VarChar(150)
-  type         String   @db.VarChar(50)
-  description  String?
-  address      String   @db.VarChar(255)
-  latitude     Float
-  longitude    Float
-  phone        String?  @db.VarChar(30)
-  openingHours String?  @map("opening_hours") @db.VarChar(100)
-  isAvailable  Boolean  @default(true) @map("is_available")
+  userId       String   @map("user_id") @db.Uuid
+  name         String   @db.VarChar(100)
+  phone        String   @db.VarChar(30)
+  relationship String?  @db.VarChar(50)
+  isPrimary    Boolean  @default(false) @map("is_primary")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("support_services")
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trusted_contacts")
 }
 
 model EmergencySOS {
@@ -50,12 +56,53 @@ model EmergencySOS {
 }
 
 model NotificationPreference {
-  id               String   @id @default(uuid()) @db.Uuid
-  nearbyAlerts     Boolean  @default(true) @map("nearby_alerts")
-  emergencyAlerts  Boolean  @default(true) @map("emergency_alerts")
-  communityUpdates Boolean  @default(true) @map("community_updates")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String      @id @default(uuid()) @db.Uuid
+  nearbyAlerts     Boolean     @default(true) @map("nearby_alerts")
+  emergencyAlerts  Boolean     @default(true) @map("emergency_alerts")
+  communityUpdates Boolean     @default(true) @map("community_updates")
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  userId String      @unique @map("user_id") @db.Uuid
+  user   UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model UserProfile {
+  id        String   @id @db.Uuid
+  fullName  String   @map("full_name")
+  email     String   @unique
+  phone     String?
+  role      UserRole @default(USER)
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  incidents       Incident[]
+  trustedContacts TrustedContact[]
+
+  notificationPreference NotificationPreference?
+  pushTokens             PushToken[]
+
+  @@map("user_profiles")
+}
+
+
+model PushToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("push_tokens")
 }
