@@ -35,6 +35,7 @@ import {
   Pressable,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
@@ -48,41 +49,36 @@ import { signIn } from "../../src/services/authService";
 import { getMyProfile } from "../../src/services/userService";
 
 /* ============================================================
-   HERO SLIDES
+   FIXED HERO IMAGE
+   Same image is used for all three languages
    ============================================================ */
 
-const heroSlides = [
-  {
-    image: require(
-      "../../assets/images/auth/login-hero-1.png"
-    ),
+const HERO_IMAGE = require(
+  "../../assets/images/auth/login-hero-1.png"
+);
 
+
+const HERO_LOGO = require(
+  "../../assets/images/logo/color-logo.png"
+);
+
+/* ============================================================
+   HERO TEXTS
+   Only text changes every 5 seconds
+   ============================================================ */
+
+const heroMessages = [
+  {
     language: "english",
-
-    text:
-      "Every woman deserves a safe journey.",
+    text: "Every woman deserves a safe journey.",
   },
-
   {
-    image: require(
-      "../../assets/images/auth/login-hero-2.png"
-    ),
-
     language: "sinhala",
-
-    text:
-      "ඔබේ සුරක්ෂිතභාවය, අපගේ වගකීමයි.",
+    text: "ඔබේ සුරක්ෂිතභාවය, අපගේ වගකීමයි.",
   },
-
   {
-    image: require(
-      "../../assets/images/auth/login-hero-3.png"
-    ),
-
     language: "tamil",
-
-    text:
-      "ஒவ்வொரு பெண்ணுக்கும் பாதுகாப்பான பயணம் உரியது.",
+    text: "ஒவ்வொரு பெண்ணுக்கும் பாதுகாப்பான பயணம் உரியது.",
   },
 ];
 
@@ -103,17 +99,12 @@ const HERO_TEXT = "#3C086C";
    ============================================================ */
 
 export default function SignInScreen() {
-  const { height } =
-    useWindowDimensions();
+  const { height } = useWindowDimensions();
 
-  const compact =
-    height < 780;
+  const compact = height < 780;
 
-  const heroHeight =
-    compact ? 278 : 313;
-
-  const inputHeight =
-    compact ? 47 : 50;
+  const heroHeight = compact ? 278 : 313;
+  const inputHeight = compact ? 47 : 50;
 
   /* ==========================================================
      FONTS
@@ -133,23 +124,20 @@ export default function SignInScreen() {
   });
 
   /* ==========================================================
-     SLIDESHOW
+     TEXT SLIDESHOW
+     Image does NOT change
      ========================================================== */
 
-  const [
-    currentSlide,
-    setCurrentSlide,
-  ] = useState(0);
+  const [currentSlide, setCurrentSlide] =
+    useState(0);
 
   useEffect(() => {
-    const interval =
-      setInterval(() => {
-        setCurrentSlide(
-          (current) =>
-            (current + 1) %
-            heroSlides.length
-        );
-      }, 5000);
+    const interval = setInterval(() => {
+      setCurrentSlide(
+        (current) =>
+          (current + 1) % heroMessages.length
+      );
+    }, 5000);
 
     return () => {
       clearInterval(interval);
@@ -157,7 +145,7 @@ export default function SignInScreen() {
   }, []);
 
   const activeHero =
-    heroSlides[currentSlide];
+    heroMessages[currentSlide];
 
   /* ==========================================================
      FORM STATE
@@ -166,25 +154,17 @@ export default function SignInScreen() {
   const [email, setEmail] =
     useState("");
 
-  const [
-    password,
-    setPassword,
-  ] = useState("");
+  const [password, setPassword] =
+    useState("");
 
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
+  const [loading, setLoading] =
+    useState(false);
 
-  const [
-    emailFocused,
-    setEmailFocused,
-  ] = useState(false);
+  const [emailFocused, setEmailFocused] =
+    useState(false);
 
   const [
     passwordFocused,
@@ -197,9 +177,7 @@ export default function SignInScreen() {
 
   const validateForm = () => {
     const cleanEmail =
-      email
-        .trim()
-        .toLowerCase();
+      email.trim().toLowerCase();
 
     if (!cleanEmail) {
       Alert.alert(
@@ -213,11 +191,7 @@ export default function SignInScreen() {
     const emailRegex =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (
-      !emailRegex.test(
-        cleanEmail
-      )
-    ) {
+    if (!emailRegex.test(cleanEmail)) {
       Alert.alert(
         "Invalid email",
         "Please enter a valid email address."
@@ -242,168 +216,138 @@ export default function SignInScreen() {
      SIGN IN
      ========================================================== */
 
-  const handleSignIn =
-    async () => {
-      if (!validateForm()) {
-        return;
-      }
+  const handleSignIn = async () => {
+    if (!validateForm()) {
+      return;
+    }
 
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        const data =
-          await signIn({
-            email: email
-              .trim()
-              .toLowerCase(),
+      const data = await signIn({
+        email: email
+          .trim()
+          .toLowerCase(),
 
-            password,
-          });
+        password,
+      });
 
-        if (
-          !data.session ||
-          !data.user
-        ) {
-          throw new Error(
-            "Unable to create a login session."
-          );
-        }
-
-        const profileResponse =
-          await getMyProfile();
-
-        const role =
-          profileResponse
-            .data
-            .role;
-
-        if (
-          role === "ADMIN"
-        ) {
-          router.replace(
-            "/admin"
-          );
-        } else {
-          router.replace(
-            "/"
-          );
-        }
-      } catch (error) {
-        let message =
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while signing in.";
-
-        const lowerMessage =
-          message.toLowerCase();
-
-        if (
-          lowerMessage.includes(
-            "email not confirmed"
-          )
-        ) {
-          message =
-            "Please verify your email address before signing in.";
-        }
-
-        if (
-          lowerMessage.includes(
-            "invalid login credentials"
-          )
-        ) {
-          message =
-            "Incorrect email address or password.";
-        }
-
-        Alert.alert(
-          "Sign in failed",
-          message
+      if (
+        !data.session ||
+        !data.user
+      ) {
+        throw new Error(
+          "Unable to create a login session."
         );
-      } finally {
-        setLoading(false);
       }
-    };
+
+      const profileResponse =
+        await getMyProfile();
+
+      const role =
+        profileResponse.data.role;
+
+      if (role === "ADMIN") {
+        router.replace("/admin");
+      } else {
+        router.replace("/");
+      }
+    } catch (error) {
+      let message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while signing in.";
+
+      const lowerMessage =
+        message.toLowerCase();
+
+      if (
+        lowerMessage.includes(
+          "email not confirmed"
+        )
+      ) {
+        message =
+          "Please verify your email address before signing in.";
+      }
+
+      if (
+        lowerMessage.includes(
+          "invalid login credentials"
+        )
+      ) {
+        message =
+          "Incorrect email address or password.";
+      }
+
+      Alert.alert(
+        "Sign in failed",
+        message
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ==========================================================
      HERO TEXT STYLE
      ========================================================== */
 
-  const getHeroTextStyle =
-    () => {
-      /* ======================================================
-         ENGLISH
-         Raleway Medium
-         ====================================================== */
+  const getHeroTextStyle = () => {
+    /* English */
 
-      if (
-        activeHero.language ===
-        "english"
-      ) {
-        return {
-          fontFamily: "Raleway_600SemiBold",
-
-          fontSize:
-            compact
-              ? 21
-              : 23,
-
-          lineHeight:
-            compact
-              ? 26
-              : 28,
-
-          letterSpacing:
-            -0.2,
-        };
-      }
-
-      /* ======================================================
-         SINHALA
-         ====================================================== */
-
-      if (
-        activeHero.language ===
-        "sinhala"
-      ) {
-        return {
-          fontFamily:
-            "NotoSansSinhala_800ExtraBold",
-
-          fontSize:
-            compact
-              ? 19
-              : 21,
-
-          lineHeight:
-            compact
-              ? 28
-              : 31,
-
-          letterSpacing: 0,
-        };
-      }
-
-      /* ======================================================
-         TAMIL
-         ====================================================== */
-
+    if (
+      activeHero.language ===
+      "english"
+    ) {
       return {
         fontFamily:
-          "NotoSansTamil_600SemiBold",
+          "Raleway_700Bold",
 
         fontSize:
-          compact
-            ? 17
-            : 19,
+          compact ? 21 : 23,
 
         lineHeight:
-          compact
-            ? 27
-            : 30,
+          compact ? 26 : 28,
+
+        letterSpacing: -0.2,
+      };
+    }
+
+    /* Sinhala */
+
+    if (
+      activeHero.language ===
+      "sinhala"
+    ) {
+      return {
+        fontFamily:
+          "NotoSansSinhala_800ExtraBold",
+
+        fontSize:
+          compact ? 19 : 21,
+
+        lineHeight:
+          compact ? 28 : 31,
 
         letterSpacing: 0,
       };
+    }
+
+    /* Tamil */
+
+    return {
+      fontFamily:
+        "NotoSansTamil_600SemiBold",
+
+      fontSize:
+        compact ? 17 : 19,
+
+      lineHeight:
+        compact ? 27 : 30,
+
+      letterSpacing: 0,
     };
+  };
 
   /* ==========================================================
      FONT LOADING
@@ -414,9 +358,7 @@ export default function SignInScreen() {
       <View
         style={{
           flex: 1,
-
-          backgroundColor:
-            BACKGROUND,
+          backgroundColor: BACKGROUND,
         }}
       />
     );
@@ -424,30 +366,18 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView
-      edges={[
-        "top",
-        "bottom",
-      ]}
-      style={{
-        flex: 1,
-
-        backgroundColor:
-          BACKGROUND,
-      }}
+      edges={["top", "bottom"]}
+      style={styles.safeArea}
     >
       <StatusBar
         barStyle="light-content"
-
         backgroundColor={
           COLORS.primaryDark
         }
       />
 
       <KeyboardAvoidingView
-        style={{
-          flex: 1,
-        }}
-
+        style={styles.flex}
         behavior={
           Platform.OS === "ios"
             ? "padding"
@@ -455,23 +385,15 @@ export default function SignInScreen() {
         }
       >
         <ScrollView
-          style={{
-            flex: 1,
-          }}
-
+          style={styles.flex}
           showsVerticalScrollIndicator={
             false
           }
-
           keyboardShouldPersistTaps="handled"
-
           contentContainerStyle={{
             flexGrow: 1,
-
             paddingBottom:
-              compact
-                ? 10
-                : 14,
+              compact ? 10 : 14,
           }}
         >
           {/* ==================================================
@@ -479,132 +401,95 @@ export default function SignInScreen() {
               ================================================== */}
 
           <View
-            style={{
-              width: "100%",
-
-              height:
-                heroHeight,
-
-              position:
-                "relative",
-
-              overflow:
-                "hidden",
-
-              backgroundColor:
-                "#FFFFFF",
-            }}
+            style={[
+              styles.heroContainer,
+              {
+                height: heroHeight,
+              },
+            ]}
           >
-            {/* =================================================
-                ORIGINAL IMAGE
-                ================================================= */}
+            {/* ================================================
+                FIXED IMAGE
+                Always login-hero-1.png
+                ================================================ */}
 
             <Image
-              key={`hero-${currentSlide}`}
-
-              source={
-                activeHero.image
-              }
-
-              resizeMode="contain"
-
-              style={{
-                position:
-                  "absolute",
-
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-
-                width:
-                  "100%",
-
-                height:
-                  "100%",
-
-                opacity: 1,
-              }}
+              source={HERO_IMAGE}
+              resizeMode="cover"
+              style={styles.heroImage}
             />
 
-            {/* =================================================
-                LEFT #EEAAFF BLEND ONLY
-                ================================================= */}
+            {/* ================================================
+                STRONG LEFT PINK FADE
+                Increased strength + width
+                ================================================ */}
 
-            <LinearGradient
-              pointerEvents="none"
+      <LinearGradient
+  pointerEvents="none"
+  colors={[
+    "rgba(255,255,255,0.95)",
+    "rgba(255,235,247,0.92)",
+    "rgba(255,205,235,0.86)",
+    "rgba(248,175,230,0.72)",
+    "rgba(238,170,255,0.48)",
+    "rgba(238,170,255,0.22)",
+    "rgba(238,170,255,0.00)",
+  ]}
+  locations={[
+    0,
+    0.18,
+    0.34,
+    0.48,
+    0.60,
+    0.70,
+    0.80,
+  ]}
+  start={{
+    x: 0,
+    y: 0.5,
+  }}
+  end={{
+    x: 1,
+    y: 0.5,
+  }}
+  style={styles.leftGradient}
+/>
 
-              colors={[
-                "rgba(238,170,255,0.76)",
+            {/* ================================================
+                EXTRA TOP-LEFT SOFT FADE
+                ================================================ */}
 
-                "rgba(238,170,255,0.68)",
+          <LinearGradient
+  pointerEvents="none"
+  colors={[
+    "rgba(255,245,250,0.55)",
+    "rgba(255,205,235,0.52)",
+    "rgba(245,175,235,0.42)",
+    "rgba(238,170,255,0.00)",
+  ]}
+  locations={[
+    0,
+    0.20,
+    0.38,
+    0.55,
+  ]}
+  start={{
+    x: 0,
+    y: 0,
+  }}
+  end={{
+    x: 0.72,
+    y: 1,
+  }}
+  style={styles.topLeftGradient}
+/>
 
-                "rgba(238,170,255,0.52)",
-
-                "rgba(238,170,255,0.28)",
-
-                "rgba(238,170,255,0.08)",
-
-                "rgba(238,170,255,0.00)",
-              ]}
-
-              locations={[
-                0,
-                0.20,
-                0.40,
-                0.63,
-                0.82,
-                1,
-              ]}
-
-              start={{
-                x: 0,
-                y: 0.5,
-              }}
-
-              end={{
-                x: 1,
-                y: 0.5,
-              }}
-
-              style={{
-                position:
-                  "absolute",
-
-                left: 0,
-
-                top: 0,
-
-                bottom: 0,
-
-                width:
-                  "58%",
-              }}
-            />
-
-            {/* =================================================
+            {/* ================================================
                 HERO CONTENT
-                ================================================= */}
+                ================================================ */}
 
             <View
-              style={{
-                position:
-                  "absolute",
-
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-
-                paddingHorizontal:
-                  24,
-
-                paddingTop:
-                  10,
-
-                paddingBottom:
-                  20,
-              }}
+              style={styles.heroContent}
             >
               {/* BACK BUTTON */}
 
@@ -612,39 +497,20 @@ export default function SignInScreen() {
                 onPress={() =>
                   router.back()
                 }
-
                 hitSlop={10}
-
-                style={({
-                  pressed,
-                }) => ({
-                  width: 34,
-
-                  height: 34,
-
-                  borderRadius:
-                    17,
-
-                  alignItems:
-                    "center",
-
-                  justifyContent:
-                    "center",
-
-                  backgroundColor:
-                    "rgba(60,8,108,0.72)",
-
-                  opacity:
-                    pressed
-                      ? 0.65
-                      : 1,
-                })}
+                style={({ pressed }) => [
+                  styles.backButton,
+                  {
+                    opacity:
+                      pressed
+                        ? 0.65
+                        : 1,
+                  },
+                ]}
               >
                 <Ionicons
                   name="chevron-back"
-
                   size={19}
-
                   color="#FFFFFF"
                 />
               </Pressable>
@@ -652,79 +518,60 @@ export default function SignInScreen() {
               {/* HERO TEXT */}
 
               <View
-                style={{
-                  flex: 1,
-
-                  justifyContent:
-                    "flex-end",
-                }}
+                style={styles.heroTextArea}
               >
                 <View
-                  style={{
-                    width:
-                      "56%",
-                  }}
-                >
-                  <Text
-                    style={[
-                      {
-                        color:
-                          HERO_TEXT,
-                      },
+  style={
+    styles.heroTextContainer
+  }
+>
+  {/* SAFEHER LOGO */}
+  <Image
+    source={HERO_LOGO}
+    resizeMode="contain"
+    style={styles.heroLogo}
+  />
 
-                      getHeroTextStyle(),
-                    ]}
-                  >
-                    {
-                      activeHero.text
-                    }
-                  </Text>
+  {/* TRANSLATED HERO TEXT */}
+  <Text
+    style={[
+      {
+        color: HERO_TEXT,
+      },
 
-                  {/* ===========================================
-                      SMALL WHITE DOTS
-                      =========================================== */}
+      getHeroTextStyle(),
+    ]}
+  >
+    {activeHero.text}
+  </Text>
+
+                  {/* TEXT LANGUAGE INDICATOR */}
 
                   <View
-                    style={{
-                      marginTop:
-                        12,
-
-                      flexDirection:
-                        "row",
-
-                      alignItems:
-                        "center",
-                    }}
+                    style={
+                      styles.heroDots
+                    }
                   >
-                    {heroSlides.map(
-                      (
-                        _,
-                        index
-                      ) => {
+                    {heroMessages.map(
+                      (_, index) => {
                         const active =
                           currentSlide ===
                           index;
 
                         return (
                           <View
-                            key={
-                              index
-                            }
-
+                            key={index}
                             style={{
                               width:
                                 active
                                   ? 11
                                   : 5,
 
-                              height:
-                                5,
+                              height: 5,
 
-                              marginRight:
-                                5,
+                              marginRight: 5,
 
-                              borderRadius:
-                                3,
+                              borderRadius: 3,
 
                               backgroundColor:
                                 active
@@ -746,15 +593,15 @@ export default function SignInScreen() {
               ================================================== */}
 
           <View
-            style={{
-              paddingHorizontal:
-                24,
-
-              paddingTop:
-                compact
-                  ? 24
-                  : 28,
-            }}
+            style={[
+              styles.form,
+              {
+                paddingTop:
+                  compact
+                    ? 24
+                    : 28,
+              },
+            ]}
           >
             {/* WELCOME */}
 
@@ -776,32 +623,17 @@ export default function SignInScreen() {
                     ? 25
                     : 28,
 
-                letterSpacing:
-                  -0.3,
+                letterSpacing: -0.3,
               }}
             >
               Welcome back
             </Text>
 
             <Text
-              style={{
-                marginTop:
-                  3,
-
-                color:
-                  MUTED,
-
-                fontFamily:
-                  "Raleway_400Regular",
-
-                fontSize:
-                  11,
-
-                lineHeight:
-                  15,
-              }}
+              style={styles.subtitle}
             >
-              Sign in to continue to your SafeHer account.
+              Sign in to continue to your
+              SafeHer account.
             </Text>
 
             {/* =================================================
@@ -817,57 +649,29 @@ export default function SignInScreen() {
               }}
             >
               <Text
-                style={{
-                  marginBottom:
-                    5,
-
-                  color:
-                    COLORS.text,
-
-                  fontFamily:
-                    "Raleway_600SemiBold",
-
-                  fontSize:
-                    11.3,
-                }}
+                style={styles.label}
               >
                 Email address
               </Text>
 
               <View
-                style={{
-                  height:
-                    inputHeight,
+                style={[
+                  styles.inputContainer,
 
-                  flexDirection:
-                    "row",
+                  {
+                    height:
+                      inputHeight,
 
-                  alignItems:
-                    "center",
-
-                  paddingHorizontal:
-                    14,
-
-                  borderWidth:
-                    1.2,
-
-                  borderColor:
-                    emailFocused
-                      ? COLORS.primary
-                      : BORDER,
-
-                  borderRadius:
-                    15,
-
-                  backgroundColor:
-                    INPUT_BACKGROUND,
-                }}
+                    borderColor:
+                      emailFocused
+                        ? COLORS.primary
+                        : BORDER,
+                  },
+                ]}
               >
                 <Ionicons
                   name="mail-outline"
-
                   size={18}
-
                   color={
                     emailFocused
                       ? COLORS.primary
@@ -876,60 +680,30 @@ export default function SignInScreen() {
                 />
 
                 <TextInput
-                  value={
-                    email
-                  }
-
+                  value={email}
                   onChangeText={
                     setEmail
                   }
-
                   onFocus={() =>
                     setEmailFocused(
                       true
                     )
                   }
-
                   onBlur={() =>
                     setEmailFocused(
                       false
                     )
                   }
-
                   placeholder="name@example.com"
-
                   placeholderTextColor="#AAA1AE"
-
                   keyboardType="email-address"
-
                   autoCapitalize="none"
-
-                  autoCorrect={
-                    false
-                  }
-
+                  autoCorrect={false}
                   autoComplete="email"
-
                   textContentType="emailAddress"
-
-                  style={{
-                    flex: 1,
-
-                    height:
-                      "100%",
-
-                    marginLeft:
-                      10,
-
-                    color:
-                      COLORS.text,
-
-                    fontFamily:
-                      "Raleway_500Medium",
-
-                    fontSize:
-                      12.3,
-                  }}
+                  style={
+                    styles.input
+                  }
                 />
               </View>
             </View>
@@ -947,57 +721,29 @@ export default function SignInScreen() {
               }}
             >
               <Text
-                style={{
-                  marginBottom:
-                    5,
-
-                  color:
-                    COLORS.text,
-
-                  fontFamily:
-                    "Raleway_600SemiBold",
-
-                  fontSize:
-                    11.3,
-                }}
+                style={styles.label}
               >
                 Password
               </Text>
 
               <View
-                style={{
-                  height:
-                    inputHeight,
+                style={[
+                  styles.inputContainer,
 
-                  flexDirection:
-                    "row",
+                  {
+                    height:
+                      inputHeight,
 
-                  alignItems:
-                    "center",
-
-                  paddingHorizontal:
-                    14,
-
-                  borderWidth:
-                    1.2,
-
-                  borderColor:
-                    passwordFocused
-                      ? COLORS.primary
-                      : BORDER,
-
-                  borderRadius:
-                    15,
-
-                  backgroundColor:
-                    INPUT_BACKGROUND,
-                }}
+                    borderColor:
+                      passwordFocused
+                        ? COLORS.primary
+                        : BORDER,
+                  },
+                ]}
               >
                 <Ionicons
                   name="lock-closed-outline"
-
                   size={18}
-
                   color={
                     passwordFocused
                       ? COLORS.primary
@@ -1006,62 +752,32 @@ export default function SignInScreen() {
                 />
 
                 <TextInput
-                  value={
-                    password
-                  }
-
+                  value={password}
                   onChangeText={
                     setPassword
                   }
-
                   onFocus={() =>
                     setPasswordFocused(
                       true
                     )
                   }
-
                   onBlur={() =>
                     setPasswordFocused(
                       false
                     )
                   }
-
                   placeholder="Enter your password"
-
                   placeholderTextColor="#AAA1AE"
-
                   secureTextEntry={
                     !showPassword
                   }
-
                   autoCapitalize="none"
-
-                  autoCorrect={
-                    false
-                  }
-
+                  autoCorrect={false}
                   autoComplete="password"
-
                   textContentType="password"
-
-                  style={{
-                    flex: 1,
-
-                    height:
-                      "100%",
-
-                    marginLeft:
-                      10,
-
-                    color:
-                      COLORS.text,
-
-                    fontFamily:
-                      "Raleway_500Medium",
-
-                    fontSize:
-                      12.3,
-                  }}
+                  style={
+                    styles.input
+                  }
                 />
 
                 <Pressable
@@ -1073,7 +789,6 @@ export default function SignInScreen() {
                         !current
                     )
                   }
-
                   hitSlop={10}
                 >
                   <Ionicons
@@ -1082,12 +797,8 @@ export default function SignInScreen() {
                         ? "eye-off-outline"
                         : "eye-outline"
                     }
-
                     size={19}
-
-                    color={
-                      MUTED
-                    }
+                    color={MUTED}
                   />
                 </Pressable>
               </View>
@@ -1119,14 +830,11 @@ export default function SignInScreen() {
                     "/auth/forgot-password"
                   )
                 }
-
                 hitSlop={8}
-
                 style={({
                   pressed,
                 }) => ({
-                  paddingVertical:
-                    3,
+                  paddingVertical: 3,
 
                   opacity:
                     pressed
@@ -1135,16 +843,9 @@ export default function SignInScreen() {
                 })}
               >
                 <Text
-                  style={{
-                    color:
-                      COLORS.primary,
-
-                    fontFamily:
-                      "Raleway_700Bold",
-
-                    fontSize:
-                      10.8,
-                  }}
+                  style={
+                    styles.forgotText
+                  }
                 >
                   Forgot password?
                 </Text>
@@ -1159,19 +860,13 @@ export default function SignInScreen() {
               onPress={
                 handleSignIn
               }
-
-              disabled={
-                loading
-              }
-
+              disabled={loading}
               style={({
                 pressed,
               }) => ({
-                borderRadius:
-                  16,
+                borderRadius: 16,
 
-                overflow:
-                  "hidden",
+                overflow: "hidden",
 
                 opacity:
                   loading
@@ -1187,25 +882,21 @@ export default function SignInScreen() {
                   COLORS.primary,
                   COLORS.pink,
                 ]}
-
                 start={{
                   x: 0,
                   y: 0.5,
                 }}
-
                 end={{
                   x: 1,
                   y: 0.5,
                 }}
-
                 style={{
                   height:
                     compact
                       ? 49
                       : 52,
 
-                  borderRadius:
-                    16,
+                  borderRadius: 16,
 
                   alignItems:
                     "center",
@@ -1220,16 +911,9 @@ export default function SignInScreen() {
                   />
                 ) : (
                   <Text
-                    style={{
-                      color:
-                        "#FFFFFF",
-
-                      fontFamily:
-                        "Raleway_700Bold",
-
-                      fontSize:
-                        13,
-                    }}
+                    style={
+                      styles.signInText
+                    }
                   >
                     Sign In
                   </Text>
@@ -1259,16 +943,9 @@ export default function SignInScreen() {
               }}
             >
               <Text
-                style={{
-                  color:
-                    MUTED,
-
-                  fontFamily:
-                    "Raleway_400Regular",
-
-                  fontSize:
-                    10.5,
-                }}
+                style={
+                  styles.accountText
+                }
               >
                 New to SafeHer?{" "}
               </Text>
@@ -1279,20 +956,12 @@ export default function SignInScreen() {
                     "/auth/sign-up"
                   )
                 }
-
                 hitSlop={6}
               >
                 <Text
-                  style={{
-                    color:
-                      COLORS.primary,
-
-                    fontFamily:
-                      "Raleway_700Bold",
-
-                    fontSize:
-                      10.5,
-                  }}
+                  style={
+                    styles.createAccountText
+                  }
                 >
                   Create Account
                 </Text>
@@ -1318,45 +987,23 @@ export default function SignInScreen() {
               }}
             >
               <View
-                style={{
-                  flex: 1,
-
-                  height:
-                    1,
-
-                  backgroundColor:
-                    BORDER,
-                }}
+                style={
+                  styles.divider
+                }
               />
 
               <Text
-                style={{
-                  marginHorizontal:
-                    10,
-
-                  color:
-                    "#A69DAA",
-
-                  fontFamily:
-                    "Raleway_500Medium",
-
-                  fontSize:
-                    8.8,
-                }}
+                style={
+                  styles.orText
+                }
               >
                 or
               </Text>
 
               <View
-                style={{
-                  flex: 1,
-
-                  height:
-                    1,
-
-                  backgroundColor:
-                    BORDER,
-                }}
+                style={
+                  styles.divider
+                }
               />
             </View>
 
@@ -1376,12 +1023,10 @@ export default function SignInScreen() {
                     "/"
                   )
                 }
-
                 style={({
                   pressed,
                 }) => ({
-                  width:
-                    "68%",
+                  width: "68%",
 
                   minHeight:
                     compact
@@ -1393,8 +1038,7 @@ export default function SignInScreen() {
                       ? 9
                       : 11,
 
-                  borderRadius:
-                    14,
+                  borderRadius: 14,
 
                   backgroundColor:
                     SOFT_PURPLE,
@@ -1412,49 +1056,22 @@ export default function SignInScreen() {
                 })}
               >
                 <Text
-                  style={{
-                    color:
-                      COLORS.primary,
-
-                    fontFamily:
-                      "Raleway_700Bold",
-
-                    fontSize:
-                      10.5,
-                  }}
+                  style={
+                    styles.guestText
+                  }
                 >
                   Continue as Guest
                 </Text>
               </Pressable>
 
               <Text
-                style={{
-                  maxWidth:
-                    300,
-
-                  marginTop:
-                    6,
-
-                  paddingHorizontal:
-                    12,
-
-                  color:
-                    "#A69DAA",
-
-                  fontFamily:
-                    "Raleway_400Regular",
-
-                  fontSize:
-                    8.4,
-
-                  lineHeight:
-                    12,
-
-                  textAlign:
-                    "center",
-                }}
+                style={
+                  styles.guestDescription
+                }
               >
-                Emergency safety features remain available without an account.
+                Emergency safety features
+                remain available without an
+                account.
               </Text>
             </View>
           </View>
@@ -1463,3 +1080,252 @@ export default function SignInScreen() {
     </SafeAreaView>
   );
 }
+
+/* ============================================================
+   STYLES
+   ============================================================ */
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: BACKGROUND,
+  },
+
+  /* HERO */
+
+  heroContainer: {
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
+
+  heroImage: {
+    position: "absolute",
+
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+
+    width: "100%",
+    height: "100%",
+
+    opacity: 1,
+  },
+
+  /*
+   * Main horizontal fade.
+   *
+   * Original width was about 58%.
+   * Increased to 78% so the fade reaches further
+   * into the image and the left side is much clearer
+   * behind the translated text.
+   */
+
+  leftGradient: {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  bottom: 0,
+  width: "100%",
+},
+
+topLeftGradient: {
+  position: "absolute",
+  left: 0,
+  top: 0,
+  width: "100%",
+  height: "100%",
+},
+
+  heroContent: {
+    position: "absolute",
+
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+
+  backButton: {
+    width: 34,
+    height: 34,
+
+    borderRadius: 17,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor:
+      "rgba(60,8,108,0.72)",
+  },
+
+  heroTextArea: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  heroTextContainer: {
+    width: "58%",
+  },
+
+  heroDots: {
+    marginTop: 12,
+
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  /* FORM */
+
+  form: {
+    paddingHorizontal: 24,
+  },
+
+  subtitle: {
+    marginTop: 3,
+
+    color: MUTED,
+
+    fontFamily:
+      "Raleway_400Regular",
+
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  label: {
+    marginBottom: 5,
+
+    color: COLORS.text,
+
+    fontFamily:
+      "Raleway_600SemiBold",
+
+    fontSize: 11.3,
+  },
+
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingHorizontal: 14,
+
+    borderWidth: 1.2,
+    borderRadius: 15,
+
+    backgroundColor:
+      INPUT_BACKGROUND,
+  },
+
+  input: {
+    flex: 1,
+    height: "100%",
+
+    marginLeft: 10,
+
+    color: COLORS.text,
+
+    fontFamily:
+      "Raleway_500Medium",
+
+    fontSize: 12.3,
+  },
+
+  forgotText: {
+    color: COLORS.primary,
+
+    fontFamily:
+      "Raleway_700Bold",
+
+    fontSize: 10.8,
+  },
+
+  signInText: {
+    color: "#FFFFFF",
+
+    fontFamily:
+      "Raleway_700Bold",
+
+    fontSize: 13,
+  },
+
+  accountText: {
+    color: MUTED,
+
+    fontFamily:
+      "Raleway_400Regular",
+
+    fontSize: 10.5,
+  },
+
+  createAccountText: {
+    color: COLORS.primary,
+
+    fontFamily:
+      "Raleway_700Bold",
+
+    fontSize: 10.5,
+  },
+
+  divider: {
+    flex: 1,
+    height: 1,
+
+    backgroundColor: BORDER,
+  },
+
+  orText: {
+    marginHorizontal: 10,
+
+    color: "#A69DAA",
+
+    fontFamily:
+      "Raleway_500Medium",
+
+    fontSize: 8.8,
+  },
+
+  guestText: {
+    color: COLORS.primary,
+
+    fontFamily:
+      "Raleway_700Bold",
+
+    fontSize: 10.5,
+  },
+
+  guestDescription: {
+    maxWidth: 300,
+
+    marginTop: 6,
+    paddingHorizontal: 12,
+
+    color: "#A69DAA",
+
+    fontFamily:
+      "Raleway_400Regular",
+
+    fontSize: 8.4,
+    lineHeight: 12,
+
+    textAlign: "center",
+  },
+
+
+  heroLogo: {
+  width: 105,
+  height: 42,
+  marginBottom: 10,
+  alignSelf: "flex-start",
+},
+});

@@ -29,9 +29,6 @@ import {
   Text,
   TextInput,
   View,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -53,8 +50,10 @@ const BACKGROUND = "#FFFBFD";
 const INPUT_BACKGROUND = "#FFFFFF";
 const BORDER = "#EDE6F0";
 const SOFT_PURPLE = "#F5F0FF";
+
 const MUTED = "#8A8192";
 const LIGHT_MUTED = "#AAA1AE";
+
 const DARK_PURPLE = "#40136F";
 
 /* ============================================================
@@ -115,16 +114,12 @@ export default function VerifyEmailScreen() {
         setCountdown(
           (current) => {
             if (current <= 1) {
-              clearInterval(
-                timer
-              );
+              clearInterval(timer);
 
               return 0;
             }
 
-            return (
-              current - 1
-            );
+            return current - 1;
           }
         );
       }, 1000);
@@ -197,21 +192,18 @@ export default function VerifyEmailScreen() {
           "Your SafeHer account has been verified successfully.",
           [
             {
-              text:
-                "Continue",
+              text: "Continue",
 
-              onPress:
-                () =>
-                  router.replace(
-                    "/"
-                  ),
+              onPress: () =>
+                router.replace(
+                  "/"
+                ),
             },
           ]
         );
       } catch (error) {
         const message =
-          error instanceof
-          Error
+          error instanceof Error
             ? error.message
             : "Unable to verify the code.";
 
@@ -260,8 +252,7 @@ export default function VerifyEmailScreen() {
         );
       } catch (error) {
         let message =
-          error instanceof
-          Error
+          error instanceof Error
             ? error.message
             : "Unable to resend the verification code.";
 
@@ -317,41 +308,40 @@ export default function VerifyEmailScreen() {
       ]}
       style={{
         flex: 1,
-
         backgroundColor:
           BACKGROUND,
       }}
     >
       <StatusBar
         barStyle="dark-content"
-
         backgroundColor={
           BACKGROUND
         }
       />
 
-     <KeyboardAvoidingView
+      <KeyboardAvoidingView
         style={{
           flex: 1,
         }}
-
         behavior={
           Platform.OS === "ios"
             ? "padding"
-            : undefined
+            : "height"
+        }
+        keyboardVerticalOffset={
+          Platform.OS === "ios"
+            ? 0
+            : 10
         }
       >
         <ScrollView
-          styl e={{
+          style={{
             flex: 1,
           }}
-
           showsVerticalScrollIndicator={
             false
           }
-
           keyboardShouldPersistTaps="handled"
-
           contentContainerStyle={{
             flexGrow: 1,
 
@@ -368,7 +358,8 @@ export default function VerifyEmailScreen() {
 
           <View
             style={{
-              paddingTop: 8,
+              paddingTop:
+                8,
 
               alignItems:
                 "flex-start",
@@ -378,15 +369,15 @@ export default function VerifyEmailScreen() {
               onPress={() =>
                 router.back()
               }
-
               hitSlop={10}
-
               style={({
                 pressed,
               }) => ({
-                width: 38,
+                width:
+                  38,
 
-                height: 38,
+                height:
+                  38,
 
                 borderRadius:
                   19,
@@ -414,9 +405,7 @@ export default function VerifyEmailScreen() {
             >
               <Ionicons
                 name="chevron-back"
-
                 size={20}
-
                 color={
                   DARK_PURPLE
                 }
@@ -451,14 +440,17 @@ export default function VerifyEmailScreen() {
             >
               <View
                 style={{
-                  width: 74,
+                  width:
+                    74,
 
-                  height: 74,
+                  height:
+                    74,
 
                   borderRadius:
                     24,
 
-                  padding: 5,
+                  padding:
+                    5,
 
                   backgroundColor:
                     SOFT_PURPLE,
@@ -470,17 +462,14 @@ export default function VerifyEmailScreen() {
                     COLORS.primary,
                     COLORS.pink,
                   ]}
-
                   start={{
                     x: 0,
                     y: 0,
                   }}
-
                   end={{
                     x: 1,
                     y: 1,
                   }}
-
                   style={{
                     flex: 1,
 
@@ -496,9 +485,7 @@ export default function VerifyEmailScreen() {
                 >
                   <Ionicons
                     name="mail-outline"
-
                     size={31}
-
                     color="#FFFFFF"
                   />
                 </LinearGradient>
@@ -513,18 +500,19 @@ export default function VerifyEmailScreen() {
               source={require(
                 "../../assets/images/logo/color-logo.png"
               )}
-
               resizeMode="contain"
-
               style={{
-                width: 115,
+                width:
+                  115,
 
-                height: 42,
+                height:
+                  42,
 
                 alignSelf:
                   "center",
 
-                marginTop: 18,
+                marginTop:
+                  18,
               }}
             />
 
@@ -534,7 +522,8 @@ export default function VerifyEmailScreen() {
 
             <Text
               style={{
-                marginTop: 8,
+                marginTop:
+                  8,
 
                 color:
                   COLORS.text,
@@ -545,9 +534,11 @@ export default function VerifyEmailScreen() {
                 fontFamily:
                   "Raleway_800ExtraBold",
 
-                fontSize: 24,
+                fontSize:
+                  24,
 
-                lineHeight: 29,
+                lineHeight:
+                  29,
 
                 letterSpacing:
                   -0.4,
@@ -562,12 +553,14 @@ export default function VerifyEmailScreen() {
 
             <Text
               style={{
-                maxWidth: 310,
+                maxWidth:
+                  310,
 
                 alignSelf:
                   "center",
 
-                marginTop: 7,
+                marginTop:
+                  7,
 
                 color:
                   MUTED,
@@ -601,7 +594,8 @@ export default function VerifyEmailScreen() {
                   maxWidth:
                     "92%",
 
-                  marginTop: 14,
+                  marginTop:
+                    14,
 
                   paddingHorizontal:
                     14,
@@ -624,9 +618,7 @@ export default function VerifyEmailScreen() {
               >
                 <Ionicons
                   name="mail-outline"
-
                   size={14}
-
                   color={
                     COLORS.primary
                   }
@@ -634,7 +626,6 @@ export default function VerifyEmailScreen() {
 
                 <Text
                   numberOfLines={1}
-
                   style={{
                     marginLeft:
                       7,
@@ -660,7 +651,8 @@ export default function VerifyEmailScreen() {
 
             <View
               style={{
-                marginTop: 26,
+                marginTop:
+                  18,
               }}
             >
               <Text
@@ -685,7 +677,8 @@ export default function VerifyEmailScreen() {
 
               <View
                 style={{
-                  height: 54,
+                  height:
+                    54,
 
                   borderRadius:
                     15,
@@ -709,8 +702,9 @@ export default function VerifyEmailScreen() {
                 }}
               >
                 <TextInput
-                  value={otp}
-
+                  value={
+                    otp
+                  }
                   onChangeText={(
                     value
                   ) =>
@@ -721,23 +715,14 @@ export default function VerifyEmailScreen() {
                       )
                     )
                   }
-
                   placeholder="00000000"
-
-                  placeholderTextColor={
-                    "#C0B9C3"
-                  }
-
+                  placeholderTextColor="#C0B9C3"
                   keyboardType="number-pad"
-
                   maxLength={8}
-
                   textAlign="center"
-
                   selectionColor={
                     COLORS.primary
                   }
-
                   style={{
                     width:
                       "100%",
@@ -764,8 +749,11 @@ export default function VerifyEmailScreen() {
 
               <Text
                 style={{
-                  marginTop: 5,
-                  marginBottom: 20,
+                  marginTop:
+                    5,
+
+                  marginBottom:
+                    20,
 
                   color:
                     LIGHT_MUTED,
@@ -786,23 +774,20 @@ export default function VerifyEmailScreen() {
 
             {/* =================================================
                 VERIFY BUTTON
-
-                More gap added here
                 ================================================= */}
 
             <Pressable
               onPress={
                 handleVerify
               }
-
               disabled={
                 loading
               }
-
               style={({
                 pressed,
               }) => ({
-                marginTop: 28,
+                marginTop:
+                  8,
 
                 borderRadius:
                   16,
@@ -824,19 +809,17 @@ export default function VerifyEmailScreen() {
                   COLORS.primary,
                   COLORS.pink,
                 ]}
-
                 start={{
                   x: 0,
                   y: 0.5,
                 }}
-
                 end={{
                   x: 1,
                   y: 0.5,
                 }}
-
                 style={{
-                  height: 51,
+                  height:
+                    51,
 
                   borderRadius:
                     16,
@@ -877,7 +860,8 @@ export default function VerifyEmailScreen() {
 
             <View
               style={{
-                marginTop: 18,
+                marginTop:
+                  18,
 
                 flexDirection:
                   "row",
@@ -908,12 +892,10 @@ export default function VerifyEmailScreen() {
                 onPress={
                   handleResend
                 }
-
                 disabled={
                   resending ||
                   countdown > 0
                 }
-
                 hitSlop={6}
               >
                 <Text
@@ -945,7 +927,8 @@ export default function VerifyEmailScreen() {
 
             <View
               style={{
-                marginTop: 21,
+                marginTop:
+                  21,
 
                 flexDirection:
                   "row",
@@ -956,9 +939,11 @@ export default function VerifyEmailScreen() {
             >
               <View
                 style={{
-                  flex: 1,
+                  flex:
+                    1,
 
-                  height: 1,
+                  height:
+                    1,
 
                   backgroundColor:
                     BORDER,
@@ -967,15 +952,18 @@ export default function VerifyEmailScreen() {
 
               <View
                 style={{
-                  width: 10,
+                  width:
+                    10,
                 }}
               />
 
               <View
                 style={{
-                  flex: 1,
+                  flex:
+                    1,
 
-                  height: 1,
+                  height:
+                    1,
 
                   backgroundColor:
                     BORDER,
@@ -993,14 +981,14 @@ export default function VerifyEmailScreen() {
                   "/auth/sign-in"
                 )
               }
-
               style={({
                 pressed,
               }) => ({
                 alignSelf:
                   "center",
 
-                marginTop: 16,
+                marginTop:
+                  16,
 
                 paddingHorizontal:
                   18,
@@ -1031,9 +1019,7 @@ export default function VerifyEmailScreen() {
               >
                 <Ionicons
                   name="arrow-back-outline"
-
                   size={13}
-
                   color={
                     COLORS.primary
                   }
@@ -1041,7 +1027,8 @@ export default function VerifyEmailScreen() {
 
                 <Text
                   style={{
-                    marginLeft: 6,
+                    marginLeft:
+                      6,
 
                     color:
                       COLORS.primary,
@@ -1083,9 +1070,7 @@ export default function VerifyEmailScreen() {
             >
               <Ionicons
                 name="shield-checkmark-outline"
-
                 size={11}
-
                 color={
                   LIGHT_MUTED
                 }

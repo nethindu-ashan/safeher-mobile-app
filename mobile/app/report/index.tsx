@@ -1,14 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
-
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+
+import {
+  ComponentProps,
+  useState,
+} from "react";
 
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   Switch,
   Text,
+  TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -16,45 +26,145 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import AppInput from "../../src/components/AppInput";
-import PrimaryButton from "../../src/components/PrimaryButton";
 import ScreenHeader from "../../src/components/ScreenHeader";
-
-import {
-  useIncidentReport,
-} from "../../src/context/IncidentReportContext";
 
 import {
   COLORS,
 } from "../../src/constants/theme";
 
 import {
+  useIncidentReport,
+} from "../../src/context/IncidentReportContext";
+
+import {
   pickIncidentEvidence,
 } from "../../src/services/evidenceService";
 
-const categories = [
-  "Harassment",
-  "Suspicious Activity",
-  "Unsafe Area",
-  "Other",
+/* ============================================================
+   TYPES
+   ============================================================ */
+
+type IconName =
+  ComponentProps<typeof Ionicons>["name"];
+
+type IncidentOption = {
+  value: string;
+  title: string;
+  icon: IconName;
+};
+
+/* ============================================================
+   COLORS
+   ============================================================ */
+
+const BACKGROUND =
+  "#FFFBFD";
+
+const ERROR =
+  COLORS.error ?? "#D64545";
+
+/* ============================================================
+   INCIDENT TYPES
+   ============================================================ */
+
+const INCIDENT_TYPES: IncidentOption[] = [
+  {
+    value: "Harassment",
+    title: "Harassment",
+    icon: "hand-left-outline",
+  },
+  {
+    value: "Suspicious Activity",
+    title: "Suspicious Activity",
+    icon: "eye-outline",
+  },
+  {
+    value: "Unsafe Area",
+    title: "Unsafe Area",
+    icon: "location-outline",
+  },
+  {
+    value: "Other",
+    title: "Other",
+    icon: "ellipsis-horizontal-outline",
+  },
 ];
 
+/* ============================================================
+   SCREEN
+   ============================================================ */
+
 export default function ReportIncidentScreen() {
+  const { height } =
+    useWindowDimensions();
+
+  const compact =
+    height < 780;
+
+  /* ==========================================================
+     CONTEXT
+     ========================================================== */
+
   const {
     draft,
     updateDraft,
   } = useIncidentReport();
 
+  /* ==========================================================
+     STATE
+     ========================================================== */
+
+  const [
+    showErrors,
+    setShowErrors,
+  ] = useState(false);
+
+  const [
+    descriptionFocused,
+    setDescriptionFocused,
+  ] = useState(false);
+
+  /* ==========================================================
+     VALUES
+     ========================================================== */
+
+  const evidenceCount =
+    draft.evidence.length;
+
+  const evidenceLimitReached =
+    evidenceCount >= 3;
+
+  const descriptionLength =
+    draft.description.length;
+
   const hasLocation =
     draft.latitude !== null &&
     draft.longitude !== null;
 
+  const categoryError =
+    showErrors &&
+    !draft.category;
+
+  const descriptionError =
+    showErrors &&
+    !draft.description.trim();
+
+  /* ==========================================================
+     ADD PHOTOS
+     ========================================================== */
+
   const handleAddEvidence =
     async () => {
+      if (
+        evidenceLimitReached
+      ) {
+        return;
+      }
+
       try {
         const selected =
           await pickIncidentEvidence(
-            draft.evidence.length
+            evidenceCount
           );
 
         if (
@@ -71,13 +181,17 @@ export default function ReportIncidentScreen() {
         });
       } catch (error) {
         Alert.alert(
-          "Evidence",
+          "Unable to add photos",
           error instanceof Error
             ? error.message
-            : "Unable to select photos."
+            : "Please try again."
         );
       }
     };
+
+  /* ==========================================================
+     REMOVE PHOTO
+     ========================================================== */
 
   const removeEvidence = (
     index: number
@@ -85,182 +199,398 @@ export default function ReportIncidentScreen() {
     updateDraft({
       evidence:
         draft.evidence.filter(
-          (
-            _,
-            itemIndex
-          ) =>
-            itemIndex !==
-            index
+          (_, itemIndex) =>
+            itemIndex !== index
         ),
     });
   };
 
-  const handleContinue = () => {
-    if (!draft.category) {
-      Alert.alert(
-        "Missing Information",
-        "Please select an incident category."
-      );
-      return;
-    }
+  /* ==========================================================
+     CONTINUE
+     ========================================================== */
 
-    if (
-      !draft.description.trim()
-    ) {
-      Alert.alert(
-        "Missing Information",
-        "Please enter a description."
-      );
-      return;
-    }
+  const handleContinue =
+    () => {
+      if (
+        !draft.category ||
+        !draft.description.trim()
+      ) {
+        setShowErrors(true);
+        return;
+      }
 
-    if (!hasLocation) {
+      setShowErrors(false);
+
+      /*
+       * If location is already selected,
+       * user does NOT need to select it again.
+       *
+       * This happens especially when the
+       * user comes back from Review to edit.
+       */
+
+      if (hasLocation) {
+        router.push(
+          "/report/review"
+        );
+
+        return;
+      }
+
+      /*
+       * First time reporting:
+       * location has not been selected yet.
+       */
+
       router.push(
         "/report/select-location"
       );
-      return;
-    }
+    };
 
-    router.push(
-      "/report/review"
-    );
-  };
+  /* ==========================================================
+     UI
+     ========================================================== */
 
   return (
     <SafeAreaView
+      edges={[
+        "top",
+        "bottom",
+      ]}
+      className="flex-1"
       style={{
-        flex: 1,
         backgroundColor:
-          COLORS.background,
+          BACKGROUND,
       }}
     >
-      <ScrollView
-        className="flex-1 px-5"
-        showsVerticalScrollIndicator={
-          false
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={
+          BACKGROUND
         }
-        contentContainerStyle={{
-          paddingBottom: 30,
-        }}
+      />
+
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
-        <ScreenHeader title="Report an Incident" />
+        {/* ==================================================
+            HEADER
+            ================================================== */}
 
-        <Text className="mt-3 text-sm font-medium text-app-text">
-          Incident Type
-        </Text>
-
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          {categories.map(
-            (category) => {
-              const selected =
-                draft.category ===
-                category;
-
-              return (
-                <Pressable
-                  key={
-                    category
-                  }
-                  onPress={() =>
-                    updateDraft({
-                      category,
-                    })
-                  }
-                  className={
-                    selected
-                      ? "rounded-full bg-light-purple px-4 py-3"
-                      : "rounded-full border border-app-border bg-white px-4 py-3"
-                  }
-                >
-                  <Text
-                    className={
-                      selected
-                        ? "font-medium text-primary"
-                        : "text-app-muted"
-                    }
-                  >
-                    {
-                      category
-                    }
-                  </Text>
-                </Pressable>
-              );
-            }
-          )}
-        </View>
-
-        <View className="mt-6">
-          <AppInput
-            label="Description"
-            placeholder="Describe what happened"
-            multiline
-            numberOfLines={5}
-            value={
-              draft.description
-            }
-            onChangeText={(
-              description
-            ) =>
-              updateDraft({
-                description,
-              })
-            }
+        <View className="px-5">
+          <ScreenHeader
+            title="Report Incident"
           />
+
+          <Text className="-mt-1 mb-5 text-[11px] leading-[17px] text-app-muted">
+            Share a few details about
+            what happened.
+          </Text>
         </View>
 
-        <View className="mt-6">
-          <Text className="text-sm font-semibold text-app-text">
-            Incident Evidence
-          </Text>
+        {/* ==================================================
+            FORM
+            ================================================== */}
 
-          <Text className="mt-1 text-xs leading-5 text-app-muted">
-            Add up to 3
-            optional photos
-            that may help
-            administrators
-            review your report.
-          </Text>
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={
+            false
+          }
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: 28,
+          }}
+        >
+          {/* =================================================
+              INCIDENT TYPE
+              ================================================= */}
 
-          <Pressable
-            onPress={
-              handleAddEvidence
-            }
-            disabled={
-              draft.evidence
-                .length >= 3
-            }
-            className="mt-3 flex-row items-center justify-center rounded-2xl border border-app-border bg-white py-4 active:opacity-75"
-          >
-            <Ionicons
-              name="images-outline"
-              size={21}
-              color={
-                draft.evidence
-                  .length >= 3
-                  ? COLORS.textSecondary
-                  : COLORS.primary
-              }
-            />
+          <View className="mb-7">
+            <View className="flex-row items-center">
+              <Text className="text-[15px] font-bold text-app-text">
+                Incident type
+              </Text>
 
-            <Text
-              className={
-                draft.evidence
-                  .length >= 3
-                  ? "ml-2 font-semibold text-app-muted"
-                  : "ml-2 font-semibold text-primary"
-              }
-            >
-              {draft.evidence
-                .length >= 3
-                ? "Maximum 3 Photos"
-                : "Add Photos"}
+              <Text className="ml-1 text-[13px] font-bold text-[#D34A61]">
+                *
+              </Text>
+            </View>
+
+            <Text className="mt-1 text-[10px] leading-[15px] text-app-muted">
+              Select one option.
             </Text>
-          </Pressable>
 
-          {draft.evidence
-            .length > 0 && (
-            <>
-              <View className="mt-4 flex-row flex-wrap gap-3">
+            {/* INCIDENT GRID */}
+
+            <View className="mt-4 flex-row flex-wrap justify-between">
+              {INCIDENT_TYPES.map(
+                (item) => {
+                  const selected =
+                    draft.category ===
+                    item.value;
+
+                  return (
+                    <Pressable
+                      key={
+                        item.value
+                      }
+                      onPress={() => {
+                        updateDraft({
+                          category:
+                            item.value,
+                        });
+                      }}
+                      className={`mb-3 w-[48.5%] flex-row items-center rounded-[16px] border px-3 py-3.5 active:opacity-80 ${
+                        selected
+                          ? "border-primary bg-[#F8F3FF]"
+                          : "border-app-border bg-white"
+                      }`}
+                      style={{
+                        minHeight: 64,
+                      }}
+                    >
+                      {/* ICON */}
+
+                      <View
+                        className={`h-9 w-9 items-center justify-center rounded-[12px] ${
+                          selected
+                            ? "bg-[#EEE5FF]"
+                            : "bg-[#F7F4F8]"
+                        }`}
+                      >
+                        <Ionicons
+                          name={
+                            item.icon
+                          }
+                          size={18}
+                          color={
+                            selected
+                              ? COLORS.primary
+                              : "#756D7A"
+                          }
+                        />
+                      </View>
+
+                      {/* TITLE */}
+
+                      <Text
+                        className={`ml-2.5 flex-1 text-[10.5px] font-semibold leading-[14px] ${
+                          selected
+                            ? "text-primary"
+                            : "text-app-text"
+                        }`}
+                        numberOfLines={
+                          2
+                        }
+                      >
+                        {
+                          item.title
+                        }
+                      </Text>
+
+                      {/* SELECTED */}
+
+                      {selected && (
+                        <View className="ml-1 h-5 w-5 items-center justify-center rounded-full bg-primary">
+                          <Ionicons
+                            name="checkmark"
+                            size={12}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                }
+              )}
+            </View>
+
+            {/* ERROR */}
+
+            {categoryError && (
+              <View className="mt-1 flex-row items-center">
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={14}
+                  color={ERROR}
+                />
+
+                <Text className="ml-1.5 text-[10px] font-medium text-[#C73F48]">
+                  Please select an
+                  incident type.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* =================================================
+              DESCRIPTION
+              ================================================= */}
+
+          <View className="mb-7">
+            <View className="flex-row items-center">
+              <Text className="text-[15px] font-bold text-app-text">
+                What happened?
+              </Text>
+
+              <Text className="ml-1 text-[13px] font-bold text-[#D34A61]">
+                *
+              </Text>
+            </View>
+
+            <Text className="mt-1 text-[10px] leading-[15px] text-app-muted">
+              Briefly describe what
+              you saw or experienced.
+            </Text>
+
+            <View
+              className={`mt-3 overflow-hidden rounded-[16px] border bg-white ${
+                descriptionError
+                  ? "border-[#D64545]"
+                  : descriptionFocused
+                  ? "border-primary"
+                  : "border-app-border"
+              }`}
+            >
+              <TextInput
+                value={
+                  draft.description
+                }
+                onChangeText={(
+                  description
+                ) =>
+                  updateDraft({
+                    description,
+                  })
+                }
+                onFocus={() =>
+                  setDescriptionFocused(
+                    true
+                  )
+                }
+                onBlur={() =>
+                  setDescriptionFocused(
+                    false
+                  )
+                }
+                placeholder="Describe what happened..."
+                placeholderTextColor="#AAA2AE"
+                multiline
+                maxLength={500}
+                textAlignVertical="top"
+                autoCapitalize="sentences"
+                autoCorrect
+                className="min-h-[115px] px-4 pb-2 pt-4 text-[12px] leading-[18px] text-app-text"
+              />
+
+              <View className="items-end px-4 pb-3">
+                <Text className="text-[9px] text-[#AAA1AE]">
+                  {
+                    descriptionLength
+                  }
+                  /500
+                </Text>
+              </View>
+            </View>
+
+            {/* ERROR */}
+
+            {descriptionError && (
+              <View className="mt-2 flex-row items-center">
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={14}
+                  color={ERROR}
+                />
+
+                <Text className="ml-1.5 text-[10px] font-medium text-[#C73F48]">
+                  Please add a short
+                  description.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* =================================================
+              PHOTOS
+              ================================================= */}
+
+          <View className="mb-7">
+            <View className="flex-row items-center justify-between">
+              <View>
+                <View className="flex-row items-center">
+                  <Text className="text-[15px] font-bold text-app-text">
+                    Photos
+                  </Text>
+
+                  <Text className="ml-2 text-[9px] text-app-muted">
+                    Optional
+                  </Text>
+                </View>
+
+                <Text className="mt-1 text-[10px] text-app-muted">
+                  Add up to 3 photos.
+                </Text>
+              </View>
+
+              <Text className="text-[10px] font-semibold text-app-muted">
+                {evidenceCount}/3
+              </Text>
+            </View>
+
+            {/* ADD PHOTO */}
+
+            {!evidenceLimitReached && (
+              <Pressable
+                onPress={
+                  handleAddEvidence
+                }
+                className="mt-3 flex-row items-center rounded-[16px] border border-app-border bg-white px-4 py-3.5 active:opacity-75"
+              >
+                <View className="h-10 w-10 items-center justify-center rounded-[12px] bg-light-purple">
+                  <Ionicons
+                    name="camera-outline"
+                    size={19}
+                    color={
+                      COLORS.primary
+                    }
+                  />
+                </View>
+
+                <View className="ml-3 flex-1">
+                  <Text className="text-[11px] font-semibold text-app-text">
+                    {evidenceCount === 0
+                      ? "Add photos"
+                      : "Add another photo"}
+                  </Text>
+
+                  <Text className="mt-0.5 text-[9px] text-app-muted">
+                    Choose from your
+                    device
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="add"
+                  size={20}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              </Pressable>
+            )}
+
+            {/* PHOTO PREVIEWS */}
+
+            {evidenceCount > 0 && (
+              <View className="mt-3 flex-row flex-wrap">
                 {draft.evidence.map(
                   (
                     item,
@@ -268,19 +598,14 @@ export default function ReportIncidentScreen() {
                   ) => (
                     <View
                       key={`${item.uri}-${index}`}
-                      className="relative"
+                      className="relative mb-3 mr-3"
                     >
                       <Image
                         source={{
                           uri:
                             item.uri,
                         }}
-                        style={{
-                          width: 92,
-                          height: 92,
-                          borderRadius:
-                            16,
-                        }}
+                        className="h-[78px] w-[78px] rounded-[14px] bg-light-purple"
                       />
 
                       <Pressable
@@ -289,15 +614,12 @@ export default function ReportIncidentScreen() {
                             index
                           )
                         }
-                        style={{
-                          backgroundColor:
-                            COLORS.error,
-                        }}
-                        className="absolute -right-2 -top-2 h-7 w-7 items-center justify-center rounded-full"
+                        hitSlop={7}
+                        className="absolute -right-2 -top-2 h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#D64545]"
                       >
                         <Ionicons
                           name="close"
-                          size={17}
+                          size={13}
                           color="#FFFFFF"
                         />
                       </Pressable>
@@ -305,33 +627,22 @@ export default function ReportIncidentScreen() {
                   )
                 )}
               </View>
+            )}
+          </View>
 
-              <Text className="mt-3 text-xs text-app-muted">
-                {
-                  draft
-                    .evidence
-                    .length
-                }
-                /3 photos
-                selected
-              </Text>
-            </>
-          )}
-        </View>
+          {/* =================================================
+              ANONYMOUS
+              ================================================= */}
 
-        <View className="mt-6 rounded-2xl border border-app-border bg-white p-4">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-1 pr-4">
-              <Text className="font-semibold text-app-text">
-                Report
-                Anonymously
+          <View className="mb-2 flex-row items-center rounded-[16px] border border-app-border bg-white px-4 py-4">
+            <View className="flex-1 pr-3">
+              <Text className="text-[12px] font-semibold text-app-text">
+                Report anonymously
               </Text>
 
-              <Text className="mt-1 text-xs leading-4 text-app-muted">
-                Your personal
-                profile will not
-                be publicly
-                linked to this
+              <Text className="mt-1 text-[9.5px] leading-[14px] text-app-muted">
+                Keep your identity
+                private with this
                 report.
               </Text>
             </View>
@@ -349,60 +660,98 @@ export default function ReportIncidentScreen() {
               }
               trackColor={{
                 false:
-                  "#D1D5DB",
+                  "#DDD8E0",
+
                 true:
                   COLORS.primary,
               }}
               thumbColor="#FFFFFF"
+              ios_backgroundColor="#DDD8E0"
             />
           </View>
-        </View>
+        </ScrollView>
 
-        {hasLocation && (
-          <View className="mt-4 rounded-2xl bg-light-purple p-4">
-            <Text className="font-semibold text-primary">
-              Location
-              Selected
-            </Text>
+        {/* ==================================================
+            BOTTOM CTA
+            ================================================== */}
 
-            <Text className="mt-1 text-sm text-app-muted">
-              {draft.latitude?.toFixed(
-                6
-              )}
-              ,{" "}
-              {draft.longitude?.toFixed(
-                6
-              )}
-            </Text>
+        <View
+          className="border-t border-[#EDE6F0] bg-white px-5"
+          style={{
+            paddingTop: 11,
 
-            <Pressable
-              onPress={() =>
-                router.push(
-                  "/report/select-location"
-                )
-              }
-            >
-              <Text className="mt-2 font-medium text-primary">
-                Change
-                Location
-              </Text>
-            </Pressable>
-          </View>
-        )}
-
-        <View className="mt-8">
-          <PrimaryButton
-            title={
-              hasLocation
-                ? "Review Report"
-                : "Select Location"
-            }
+            paddingBottom:
+              compact
+                ? 8
+                : 10,
+          }}
+        >
+          <Pressable
             onPress={
               handleContinue
             }
-          />
+            style={({
+              pressed,
+            }) => ({
+              borderRadius:
+                16,
+
+              overflow:
+                "hidden",
+
+              opacity:
+                pressed
+                  ? 0.86
+                  : 1,
+            })}
+          >
+            <LinearGradient
+              colors={[
+                COLORS.primaryDark,
+                COLORS.primary,
+                COLORS.pink,
+              ]}
+              start={{
+                x: 0,
+                y: 0.5,
+              }}
+              end={{
+                x: 1,
+                y: 0.5,
+              }}
+              style={{
+                height:
+                  compact
+                    ? 49
+                    : 52,
+
+                borderRadius:
+                  16,
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+              }}
+            >
+              {/* IMPORTANT DYNAMIC LABEL */}
+
+              <Text className="text-[13px] font-bold text-white">
+                {hasLocation
+                  ? "Continue to Review"
+                  : "Continue to Location"}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Text className="mt-2 text-center text-[9px] text-app-muted">
+            {hasLocation
+              ? "Review your updated details before submitting."
+              : "You can review your report before submitting."}
+          </Text>
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
