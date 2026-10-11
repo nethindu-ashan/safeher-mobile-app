@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+
 import {
   router,
   useLocalSearchParams,
@@ -11,6 +12,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   Text,
   View,
 } from "react-native";
@@ -44,25 +46,67 @@ import {
   COLORS,
 } from "../../src/constants/theme";
 
+/* ============================================================
+   COLORS
+   ============================================================ */
+
+const BACKGROUND = "#FFFBFD";
+
+const SOS_RED = "#D92D20";
+
+const SOS_RED_SOFT = "#FFF1F0";
+
+const GREEN = "#168447";
+
+/* ============================================================
+   SCREEN
+   ============================================================ */
+
 export default function SOSActiveScreen() {
+  /* ==========================================================
+     PARAMS
+     ========================================================== */
+
   const {
     id,
     latitude,
     longitude,
+    status,
   } = useLocalSearchParams();
+
+  /* ==========================================================
+     AUTH
+     ========================================================== */
 
   const {
     isAuthenticated,
   } = useAuth();
 
-  const [cancelling, setCancelling] =
-    useState(false);
+  /* ==========================================================
+     STATE
+     ========================================================== */
 
-  const [contactLoading, setContactLoading] =
-    useState(false);
+  const [
+    cancelling,
+    setCancelling,
+  ] = useState(false);
 
-  const [primaryContact, setPrimaryContact] =
-    useState<TrustedContact | null>(null);
+  const [
+    contactLoading,
+    setContactLoading,
+  ] = useState(false);
+
+  const [
+    primaryContact,
+    setPrimaryContact,
+  ] =
+    useState<TrustedContact | null>(
+      null
+    );
+
+  /* ==========================================================
+     PARAM VALUES
+     ========================================================== */
 
   const sosId =
     Array.isArray(id)
@@ -79,462 +123,808 @@ export default function SOSActiveScreen() {
       ? longitude[0]
       : longitude;
 
+  const statusValue =
+    Array.isArray(status)
+      ? status[0]
+      : status;
+
+  /* ==========================================================
+     LOAD TRUSTED CONTACT
+     ========================================================== */
+
   useEffect(() => {
     if (!isAuthenticated) {
       setPrimaryContact(null);
+
       return;
     }
 
-    const loadPrimaryContact = async () => {
+    const loadPrimaryContact =
+      async () => {
+        try {
+          setContactLoading(
+            true
+          );
+
+          const contact =
+            await getPrimaryTrustedContact();
+
+          setPrimaryContact(
+            contact
+          );
+        } catch (error) {
+          console.log(
+            "Unable to load primary trusted contact:",
+            error
+          );
+
+          setPrimaryContact(
+            null
+          );
+        } finally {
+          setContactLoading(
+            false
+          );
+        }
+      };
+
+    loadPrimaryContact();
+  }, [
+    isAuthenticated,
+  ]);
+
+  /* ==========================================================
+     LOCATION
+     ========================================================== */
+
+  const locationLink =
+    latitudeValue &&
+    longitudeValue
+      ? `https://maps.google.com/?q=${latitudeValue},${longitudeValue}`
+      : "";
+
+  const handleOpenLocation =
+    async () => {
+      if (!locationLink) {
+        return;
+      }
+
       try {
-        setContactLoading(true);
-
-        const contact =
-          await getPrimaryTrustedContact();
-
-        setPrimaryContact(contact);
-      } catch (error) {
-        console.log(
-          "Unable to load primary trusted contact:",
-          error
+        await Linking.openURL(
+          locationLink
         );
-
-        setPrimaryContact(null);
-      } finally {
-        setContactLoading(false);
+      } catch {
+        Alert.alert(
+          "Unable to Open Location",
+          "Google Maps could not be opened."
+        );
       }
     };
 
-    loadPrimaryContact();
-  }, [isAuthenticated]);
-
-  const locationLink =
-    latitudeValue && longitudeValue
-      ? `https://maps.google.com/?q=${latitudeValue},${longitudeValue}`
-      : "";
+  /* ==========================================================
+     EMERGENCY MESSAGE
+     ========================================================== */
 
   const emergencyMessage =
     locationLink
       ? `Emergency! I may need help. Please contact me immediately. My current location: ${locationLink}`
       : "Emergency! I may need help. Please contact me immediately.";
 
-  const handleCall = async () => {
-    if (!primaryContact) {
-      return;
-    }
+  /* ==========================================================
+     CALL
+     ========================================================== */
 
-    try {
-      await Linking.openURL(
-        `tel:${primaryContact.phone}`
-      );
-    } catch {
-      Alert.alert(
-        "Unable to Call",
-        "Your phone could not open the call application."
-      );
-    }
-  };
-
-  const handleSMS = async () => {
-    if (!primaryContact) {
-      return;
-    }
-
-    try {
-      const separator =
-        Platform.OS === "ios"
-          ? "&"
-          : "?";
-
-      const url =
-        `sms:${primaryContact.phone}${separator}body=${encodeURIComponent(
-          emergencyMessage
-        )}`;
-
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert(
-        "Unable to Open SMS",
-        "Your phone could not open the messaging application."
-      );
-    }
-  };
-
-  const handleWhatsApp = async () => {
-    if (!primaryContact) {
-      return;
-    }
-
-    try {
-      let phone =
-        primaryContact.phone.replace(
-          /\D/g,
-          ""
-        );
-
-      if (
-        phone.startsWith("0") &&
-        phone.length === 10
-      ) {
-        phone =
-          `94${phone.substring(1)}`;
+  const handleCall =
+    async () => {
+      if (!primaryContact) {
+        return;
       }
 
-      const url =
-        `https://wa.me/${phone}?text=${encodeURIComponent(
-          emergencyMessage
-        )}`;
+      try {
+        await Linking.openURL(
+          `tel:${primaryContact.phone}`
+        );
+      } catch {
+        Alert.alert(
+          "Unable to Call",
+          "Your phone could not open the call application."
+        );
+      }
+    };
 
-      await Linking.openURL(url);
-    } catch {
+  /* ==========================================================
+     SMS
+     ========================================================== */
+
+  const handleSMS =
+    async () => {
+      if (!primaryContact) {
+        return;
+      }
+
+      try {
+        const separator =
+          Platform.OS === "ios"
+            ? "&"
+            : "?";
+
+        const url =
+          `sms:${primaryContact.phone}${separator}body=${encodeURIComponent(
+            emergencyMessage
+          )}`;
+
+        await Linking.openURL(
+          url
+        );
+      } catch {
+        Alert.alert(
+          "Unable to Open SMS",
+          "Your phone could not open the messaging application."
+        );
+      }
+    };
+
+  /* ==========================================================
+     WHATSAPP
+     ========================================================== */
+
+  const handleWhatsApp =
+    async () => {
+      if (!primaryContact) {
+        return;
+      }
+
+      try {
+        let phone =
+          primaryContact.phone.replace(
+            /\D/g,
+            ""
+          );
+
+        if (
+          phone.startsWith("0") &&
+          phone.length === 10
+        ) {
+          phone =
+            `94${phone.substring(1)}`;
+        }
+
+        const url =
+          `https://wa.me/${phone}?text=${encodeURIComponent(
+            emergencyMessage
+          )}`;
+
+        await Linking.openURL(
+          url
+        );
+      } catch {
+        Alert.alert(
+          "Unable to Open WhatsApp",
+          "WhatsApp could not be opened on this device."
+        );
+      }
+    };
+
+  /* ==========================================================
+     NAVIGATION
+     ========================================================== */
+
+  const handleManageContacts =
+    () => {
+      router.push(
+        "/trusted-contacts"
+      );
+    };
+
+  const handleSignIn =
+    () => {
+      router.push(
+        "/auth/sign-in"
+      );
+    };
+
+  /* ==========================================================
+     CANCEL SOS
+     ========================================================== */
+
+  const handleCancelSOS =
+    () => {
       Alert.alert(
-        "Unable to Open WhatsApp",
-        "WhatsApp could not be opened on this device."
+        "Cancel Emergency SOS?",
+        "Are you sure you want to stop the active SOS alert?",
+        [
+          {
+            text:
+              "Keep SOS Active",
+
+            style:
+              "cancel",
+          },
+
+          {
+            text:
+              "Cancel SOS",
+
+            style:
+              "destructive",
+
+            onPress:
+              confirmCancelSOS,
+          },
+        ]
       );
-    }
-  };
+    };
 
-  const handleManageContacts = () => {
-    router.push(
-      "/trusted-contacts"
-    );
-  };
+  const confirmCancelSOS =
+    async () => {
+      if (!sosId) {
+        Alert.alert(
+          "Error",
+          "SOS ID is missing."
+        );
 
-  const handleSignIn = () => {
-    router.push(
-      "/auth/sign-in"
-    );
-  };
+        return;
+      }
 
-  const handleCancelSOS = () => {
-    Alert.alert(
-      "Cancel Emergency SOS?",
-      "Are you sure you want to cancel the active SOS alert?",
-      [
-        {
-          text: "Keep Active",
-          style: "cancel",
-        },
-        {
-          text: "Cancel SOS",
-          style: "destructive",
-          onPress: confirmCancelSOS,
-        },
-      ]
-    );
-  };
+      try {
+        setCancelling(
+          true
+        );
 
-  const confirmCancelSOS = async () => {
-    if (!sosId) {
-      Alert.alert(
-        "Error",
-        "SOS ID is missing."
-      );
+        await cancelSOS(
+          sosId
+        );
 
-      return;
-    }
+        router.replace({
+          pathname:
+            "/report/sos-cancelled",
 
-    try {
-      setCancelling(true);
+          params: {
+            id:
+              sosId,
+          },
+        });
+      } catch (error) {
+        console.error(
+          "SOS cancellation error:",
+          error
+        );
 
-      await cancelSOS(sosId);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to cancel SOS.";
 
-      router.replace({
-        pathname: "/report/sos-cancelled",
-        params: {
-          id: sosId,
-        },
-      });
-    } catch (error) {
-      console.error(
-        "SOS cancellation error:",
-        error
-      );
+        Alert.alert(
+          "Cancellation Failed",
+          message
+        );
+      } finally {
+        setCancelling(
+          false
+        );
+      }
+    };
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to cancel SOS.";
-
-      Alert.alert(
-        "Cancellation Failed",
-        message
-      );
-    } finally {
-      setCancelling(false);
-    }
-  };
+  /* ==========================================================
+     UI
+     ========================================================== */
 
   return (
     <SafeAreaView
+      edges={[
+        "top",
+        "bottom",
+      ]}
+      className="flex-1"
       style={{
-        flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor:
+          BACKGROUND,
       }}
     >
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={
+          BACKGROUND
+        }
+      />
+
+      {/* ==================================================
+          CONTENT
+          ================================================== */}
+
       <ScrollView
         className="flex-1"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         contentContainerStyle={{
-          paddingHorizontal: 24,
-          paddingTop: 30,
-          paddingBottom: 30,
+          paddingHorizontal: 20,
+
+          paddingTop: 18,
+
+          paddingBottom:
+            primaryContact
+              ? 180
+              : 125,
         }}
       >
-        <View className="items-center">
-          <View className="h-32 w-32 items-center justify-center rounded-full bg-sos-light">
-            <View className="h-24 w-24 items-center justify-center rounded-full bg-sos">
-              <Ionicons
-                name="alert"
-                size={38}
-                color="#FFFFFF"
-              />
-            </View>
+        {/* =================================================
+            SIMPLE SOS HEADER
+            ================================================= */}
+
+        <View className="flex-row items-center">
+          <View
+            className="h-11 w-11 items-center justify-center rounded-[14px]"
+            style={{
+              backgroundColor:
+                SOS_RED_SOFT,
+            }}
+          >
+            <Ionicons
+              name="warning"
+              size={22}
+              color={
+                SOS_RED
+              }
+            />
           </View>
 
-          <Text className="mt-7 text-2xl font-bold text-sos">
-            SOS Active
-          </Text>
+          <View className="ml-3 flex-1">
+            <Text
+              className="text-[8px] font-bold uppercase tracking-[1px]"
+              style={{
+                color:
+                  SOS_RED,
+              }}
+            >
+              Emergency
+            </Text>
 
-          <Text className="mt-3 px-4 text-center leading-5 text-app-muted">
-            Your emergency SOS has been recorded with
-            your current location.
-          </Text>
+            <Text className="mt-0.5 text-[19px] font-bold text-app-text">
+              SOS Active
+            </Text>
+          </View>
+
+          <View className="flex-row items-center rounded-full bg-[#ECFDF3] px-2.5 py-1.5">
+            <View
+              className="mr-1.5 h-2 w-2 rounded-full"
+              style={{
+                backgroundColor:
+                  GREEN,
+              }}
+            />
+
+            <Text
+              className="text-[7.5px] font-bold"
+              style={{
+                color:
+                  GREEN,
+              }}
+            >
+              {statusValue ??
+                "ACTIVE"}
+            </Text>
+          </View>
         </View>
 
-        <View className="mt-8 w-full rounded-2xl border border-app-border bg-white p-5">
-          <Text className="text-xs font-medium uppercase text-app-muted">
-            Status
-          </Text>
+        {/* =================================================
+            SMALL SOS SUMMARY
+            ================================================= */}
 
-          <Text className="mt-1 font-bold text-sos">
-            ACTIVE
-          </Text>
+        <View className="mt-4 rounded-[14px] bg-[#F7F3F5] px-4 py-3">
+          <View className="flex-row items-center">
+            <Ionicons
+              name="location-outline"
+              size={14}
+              color="#817888"
+            />
 
-          {sosId && (
-            <>
-              <Text className="mt-5 text-xs font-medium uppercase text-app-muted">
-                SOS ID
-              </Text>
+            <Text className="ml-2 text-[9px] font-medium text-app-muted">
+              Location shared
+            </Text>
 
-              <Text className="mt-1 text-sm text-app-text">
-                {sosId}
-              </Text>
-            </>
-          )}
-
-          {latitudeValue &&
-            longitudeValue && (
-              <>
-                <Text className="mt-5 text-xs font-medium uppercase text-app-muted">
-                  Current Location
+            {locationLink ? (
+              <Pressable
+                onPress={
+                  handleOpenLocation
+                }
+                className="ml-auto"
+              >
+                <Text className="text-[8.5px] font-semibold text-primary">
+                  View location
                 </Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-                <Text className="mt-1 text-sm text-app-text">
-                  {latitudeValue},{" "}
-                  {longitudeValue}
-                </Text>
-              </>
-            )}
+          {sosId ? (
+            <Text
+              numberOfLines={1}
+              className="mt-2 text-[8px] text-[#9B929D]"
+            >
+              SOS ID: {sosId}
+            </Text>
+          ) : null}
         </View>
 
-        <View className="mt-5">
-          <Text className="text-lg font-bold text-app-text">
-            Trusted Contact
+        {/* =================================================
+            TRUSTED CONTACT - MAIN FOCUS
+            ================================================= */}
+
+        <View className="mt-7">
+          <Text className="text-[18px] font-bold text-app-text">
+            Contact someone you trust
           </Text>
 
-          <Text className="mt-1 text-sm text-app-muted">
-            Contact someone you trust for emergency assistance.
+          <Text className="mt-1 text-[9.5px] leading-[14px] text-app-muted">
+            Your primary emergency contact
+            is ready below.
           </Text>
+
+          {/* =================================================
+              LOADING
+              ================================================= */}
 
           {contactLoading ? (
-            <View className="mt-4 items-center rounded-2xl border border-app-border bg-white p-6">
+            <View className="mt-4 items-center rounded-[20px] border border-[#F0D4D2] bg-white py-8">
               <ActivityIndicator
-                color={COLORS.primary}
+                size="small"
+                color={
+                  SOS_RED
+                }
               />
 
-              <Text className="mt-3 text-sm text-app-muted">
-                Loading primary contact...
+              <Text className="mt-3 text-[9.5px] text-app-muted">
+                Loading trusted contact...
               </Text>
             </View>
           ) : !isAuthenticated ? (
-            <View className="mt-4 rounded-2xl border border-app-border bg-white p-5">
-              <View className="flex-row items-start">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-light-purple">
+            /* =============================================
+               NOT SIGNED IN
+               ============================================= */
+
+            <View className="mt-4 rounded-[20px] border border-[#F0D4D2] bg-white p-5">
+              <View className="items-center">
+                <View
+                  className="h-14 w-14 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor:
+                      SOS_RED_SOFT,
+                  }}
+                >
                   <Ionicons
                     name="person-outline"
-                    size={22}
-                    color={COLORS.primary}
+                    size={25}
+                    color={
+                      SOS_RED
+                    }
                   />
                 </View>
 
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-app-text">
-                    No saved contact available
-                  </Text>
-
-                  <Text className="mt-1 text-sm leading-5 text-app-muted">
-                    Sign in to use your saved trusted contacts.
-                  </Text>
-                </View>
-              </View>
-
-              <Pressable
-                onPress={handleSignIn}
-                className="mt-4 items-center rounded-2xl bg-primary py-3.5 active:opacity-80"
-              >
-                <Text className="font-bold text-white">
-                  Sign In
+                <Text className="mt-3 text-[13px] font-bold text-app-text">
+                  No trusted contact available
                 </Text>
-              </Pressable>
+
+                <Text className="mt-1 text-center text-[9px] leading-[13px] text-app-muted">
+                  Sign in to access your
+                  saved emergency contacts.
+                </Text>
+              </View>
             </View>
           ) : primaryContact ? (
-            <View className="mt-4 rounded-2xl border border-app-border bg-white p-5">
-              <View className="flex-row items-center">
-                <View className="h-12 w-12 items-center justify-center rounded-full bg-light-purple">
+            /* =============================================
+               PRIMARY CONTACT
+               ============================================= */
+
+            <View
+              className="mt-4 rounded-[22px] bg-white p-5"
+              style={{
+                borderWidth: 1.5,
+
+                borderColor:
+                  "#EFBFBB",
+              }}
+            >
+              {/* CONTACT HEADER */}
+
+              <View className="items-center">
+                <View
+                  className="h-[66px] w-[66px] items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor:
+                      SOS_RED_SOFT,
+                  }}
+                >
                   <Ionicons
                     name="person"
-                    size={23}
-                    color={COLORS.primary}
+                    size={29}
+                    color={
+                      SOS_RED
+                    }
                   />
                 </View>
 
-                <View className="ml-3 flex-1">
-                  <View className="flex-row flex-wrap items-center">
-                    <Text className="text-lg font-bold text-app-text">
-                      {primaryContact.name}
-                    </Text>
-
-                    <View className="ml-2 rounded-full bg-light-purple px-3 py-1">
-                      <Text className="text-xs font-bold text-primary">
-                        PRIMARY
-                      </Text>
-                    </View>
-                  </View>
-
-                  {primaryContact.relationship && (
-                    <Text className="mt-1 text-sm text-app-muted">
-                      {primaryContact.relationship}
-                    </Text>
-                  )}
-
-                  <Text className="mt-1 text-sm font-semibold text-app-text">
-                    {primaryContact.phone}
+                <View
+                  className="mt-3 rounded-full px-2.5 py-1"
+                  style={{
+                    backgroundColor:
+                      SOS_RED_SOFT,
+                  }}
+                >
+                  <Text
+                    className="text-[7px] font-bold uppercase tracking-[0.8px]"
+                    style={{
+                      color:
+                        SOS_RED,
+                    }}
+                  >
+                    Primary Contact
                   </Text>
                 </View>
-              </View>
 
-              <Pressable
-                onPress={handleCall}
-                className="mt-5 flex-row items-center justify-center rounded-2xl bg-primary py-4 active:opacity-80"
-              >
+                <Text
+                  numberOfLines={1}
+                  className="mt-3 text-[18px] font-bold text-app-text"
+                >
+                  {primaryContact.name}
+                </Text>
+
+                {primaryContact.relationship ? (
+                  <Text className="mt-1 text-[9.5px] text-app-muted">
+                    {primaryContact.relationship}
+                  </Text>
+                ) : null}
+
+                <Text className="mt-1.5 text-[11px] font-semibold text-app-text">
+                  {primaryContact.phone}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            /* =============================================
+               NO CONTACT
+               ============================================= */
+
+            <View className="mt-4 rounded-[20px] border border-[#F0D4D2] bg-white p-5">
+              <View className="items-center">
+                <View
+                  className="h-14 w-14 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor:
+                      SOS_RED_SOFT,
+                  }}
+                >
+                  <Ionicons
+                    name="people-outline"
+                    size={25}
+                    color={
+                      SOS_RED
+                    }
+                  />
+                </View>
+
+                <Text className="mt-3 text-[13px] font-bold text-app-text">
+                  No primary contact
+                </Text>
+
+                <Text className="mt-1 max-w-[230px] text-center text-[9px] leading-[13px] text-app-muted">
+                  Add one primary trusted
+                  contact for faster access
+                  during emergencies.
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* =================================================
+            CANCEL SOS
+            ================================================= */}
+
+        <View className="mt-7 items-center">
+          <Pressable
+            onPress={
+              handleCancelSOS
+            }
+            disabled={
+              cancelling
+            }
+            className="flex-row items-center px-4 py-2.5"
+            style={({
+              pressed,
+            }) => ({
+              opacity:
+                cancelling
+                  ? 0.4
+                  : pressed
+                  ? 0.6
+                  : 1,
+            })}
+          >
+            {cancelling ? (
+              <ActivityIndicator
+                size="small"
+                color="#8A8186"
+              />
+            ) : (
+              <Ionicons
+                name="close-circle-outline"
+                size={16}
+                color="#8A8186"
+              />
+            )}
+
+            <Text className="ml-1.5 text-[9.5px] font-medium text-[#8A8186]">
+              {cancelling
+                ? "Cancelling..."
+                : "Cancel SOS"}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* ==================================================
+          FIXED HELP ACTIONS
+          ================================================== */}
+
+      <View className="border-t border-[#EDE6F0] bg-white px-4 pb-3 pt-3">
+        {primaryContact ? (
+          <>
+            {/* ===============================================
+                CALL NOW
+                =============================================== */}
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Call ${primaryContact.name}`}
+              onPress={
+                handleCall
+              }
+              className="h-[60px] flex-row items-center justify-center rounded-[18px] active:opacity-85"
+              style={{
+                backgroundColor:
+                  SOS_RED,
+              }}
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-white/15">
                 <Ionicons
                   name="call"
                   size={20}
                   color="#FFFFFF"
                 />
+              </View>
 
-                <Text className="ml-2 font-bold text-white">
-                  Call
+              <View className="ml-3">
+                <Text className="text-[14px] font-bold text-white">
+                  Call {primaryContact.name}
+                </Text>
+
+                <Text className="mt-0.5 text-[8px] text-white/85">
+                  Tap to call now
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* ===============================================
+                SMS / WHATSAPP
+                =============================================== */}
+
+            <View className="mt-2.5 flex-row">
+              <Pressable
+                onPress={
+                  handleSMS
+                }
+                className="mr-1.5 h-[46px] flex-1 flex-row items-center justify-center rounded-[14px] border border-[#DED5E4] bg-white active:opacity-70"
+              >
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={17}
+                  color={
+                    COLORS.primary
+                  }
+                />
+
+                <Text className="ml-2 text-[10.5px] font-semibold text-primary">
+                  SMS
                 </Text>
               </Pressable>
-
-              <View className="mt-3 flex-row">
-                <Pressable
-                  onPress={handleSMS}
-                  className="mr-2 flex-1 flex-row items-center justify-center rounded-2xl border border-primary py-4 active:opacity-70"
-                >
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={19}
-                    color={COLORS.primary}
-                  />
-
-                  <Text className="ml-2 font-bold text-primary">
-                    SMS
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={handleWhatsApp}
-                  className="ml-2 flex-1 flex-row items-center justify-center rounded-2xl border border-primary py-4 active:opacity-70"
-                >
-                  <Ionicons
-                    name="logo-whatsapp"
-                    size={20}
-                    color={COLORS.primary}
-                  />
-
-                  <Text className="ml-2 font-bold text-primary">
-                    WhatsApp
-                  </Text>
-                </Pressable>
-              </View>
-
-              {locationLink && (
-                <View className="mt-4 flex-row items-start rounded-2xl bg-light-purple p-4">
-                  <Ionicons
-                    name="location-outline"
-                    size={20}
-                    color={COLORS.primary}
-                  />
-
-                  <Text className="ml-2 flex-1 text-xs leading-5 text-app-muted">
-                    SMS and WhatsApp include your current location link.
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View className="mt-4 rounded-2xl border border-app-border bg-white p-5">
-              <View className="flex-row items-start">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-light-purple">
-                  <Ionicons
-                    name="people-outline"
-                    size={22}
-                    color={COLORS.primary}
-                  />
-                </View>
-
-                <View className="ml-3 flex-1">
-                  <Text className="font-bold text-app-text">
-                    No primary contact
-                  </Text>
-
-                  <Text className="mt-1 text-sm leading-5 text-app-muted">
-                    Add a trusted contact or select one as your primary emergency contact.
-                  </Text>
-                </View>
-              </View>
 
               <Pressable
-                onPress={handleManageContacts}
-                className="mt-4 items-center rounded-2xl bg-primary py-3.5 active:opacity-80"
+                onPress={
+                  handleWhatsApp
+                }
+                className="ml-1.5 h-[46px] flex-1 flex-row items-center justify-center rounded-[14px] border border-[#DED5E4] bg-white active:opacity-70"
               >
-                <Text className="font-bold text-white">
-                  Manage Trusted Contacts
+                <Ionicons
+                  name="logo-whatsapp"
+                  size={18}
+                  color={
+                    COLORS.primary
+                  }
+                />
+
+                <Text className="ml-2 text-[10.5px] font-semibold text-primary">
+                  WhatsApp
                 </Text>
               </Pressable>
             </View>
-          )}
-        </View>
+          </>
+        ) : contactLoading ? (
+          /* =================================================
+             LOADING
+             ================================================= */
 
-        <Pressable
-          onPress={handleCancelSOS}
-          disabled={cancelling}
-          className={`mt-7 items-center rounded-full border border-sos py-4 ${
-            cancelling
-              ? "opacity-50"
-              : "active:opacity-70"
-          }`}
-        >
-          <Text className="font-bold text-sos">
-            {cancelling
-              ? "Cancelling..."
-              : "Cancel SOS"}
-          </Text>
-        </Pressable>
-      </ScrollView>
+          <View className="h-[56px] flex-row items-center justify-center rounded-[17px] bg-[#FFF1F0]">
+            <ActivityIndicator
+              size="small"
+              color={
+                SOS_RED
+              }
+            />
+
+            <Text
+              className="ml-2 text-[10px] font-semibold"
+              style={{
+                color:
+                  SOS_RED,
+              }}
+            >
+              Loading contact...
+            </Text>
+          </View>
+        ) : !isAuthenticated ? (
+          /* =================================================
+             SIGN IN
+             ================================================= */
+
+          <Pressable
+            onPress={
+              handleSignIn
+            }
+            className="h-[56px] flex-row items-center justify-center rounded-[17px] active:opacity-85"
+            style={{
+              backgroundColor:
+                SOS_RED,
+            }}
+          >
+            <Ionicons
+              name="log-in-outline"
+              size={19}
+              color="#FFFFFF"
+            />
+
+            <Text className="ml-2 text-[12px] font-bold text-white">
+              Sign In for Trusted Contacts
+            </Text>
+          </Pressable>
+        ) : (
+          /* =================================================
+             ADD CONTACT
+             ================================================= */
+
+          <Pressable
+            onPress={
+              handleManageContacts
+            }
+            className="h-[56px] flex-row items-center justify-center rounded-[17px] active:opacity-85"
+            style={{
+              backgroundColor:
+                SOS_RED,
+            }}
+          >
+            <Ionicons
+              name="person-add-outline"
+              size={19}
+              color="#FFFFFF"
+            />
+
+            <Text className="ml-2 text-[12px] font-bold text-white">
+              Add Trusted Contact
+            </Text>
+          </Pressable>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
