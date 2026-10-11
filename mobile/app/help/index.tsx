@@ -8,28 +8,49 @@ import LocationCard from "../../src/components/LocationCard";
 import NearbyHelpHeader from "../../src/components/NearbyHelpHeader";
 import { NEARBY_CATEGORIES } from "../../src/constants/nearbyCategories";
 import { COLORS } from "../../src/constants/theme";
+import { useLocation } from "../../src/hooks/useLocation";
 
 export default function NearbyHelpScreen() {
+  // Get user's current location
+  const {
+    location,
+    loading: locationLoading,
+    error: locationError,
+    reload: reloadLocation,
+  } = useLocation();
+
   const handleEmergencySOS = () => {
     router.push("/report/sos");
   };
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: COLORS.background }}
+      style={{
+        flex: 1,
+        backgroundColor: COLORS.background,
+      }}
     >
       <ScrollView
         className="flex-1 px-5"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 30 }}
       >
+        {/* Nearby Help header */}
         <NearbyHelpHeader />
 
-        <LocationCard />
+        {/* Current location map preview */}
+        <LocationCard
+          location={location}
+          loading={locationLoading}
+          error={locationError}
+          onRetry={reloadLocation}
+        />
 
+        {/* Service categories */}
         <Text className="mt-7 mb-1 text-lg font-bold text-app-text">
           What help do you need?
         </Text>
+
         <Text className="mb-4 text-sm leading-5 text-app-muted">
           Quick access to trusted services near your current location.
         </Text>
@@ -53,6 +74,7 @@ export default function NearbyHelpScreen() {
           ))}
         </View>
 
+        {/* Emergency SOS shortcut */}
         <View className="mt-4 rounded-2xl bg-sos-light p-4">
           <View className="flex-row items-start">
             <View className="h-11 w-11 items-center justify-center rounded-full bg-white">
@@ -62,10 +84,12 @@ export default function NearbyHelpScreen() {
                 color={COLORS.sos}
               />
             </View>
+
             <View className="ml-3 flex-1">
               <Text className="font-semibold text-app-text">
                 Need Emergency Help?
               </Text>
+
               <Text className="mt-1 text-xs leading-4 text-app-muted">
                 Open SafeHer Emergency SOS for immediate assistance.
               </Text>
@@ -81,6 +105,7 @@ export default function NearbyHelpScreen() {
               size={20}
               color="#FFFFFF"
             />
+
             <Text className="ml-2 font-semibold text-white">
               Emergency SOS
             </Text>
