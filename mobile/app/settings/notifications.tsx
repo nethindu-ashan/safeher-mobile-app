@@ -25,7 +25,6 @@ import { updateMyLocation } from "../../src/services/locationService";
 export default function NotificationPreferencesScreen() {
   const [nearbyAlerts, setNearbyAlerts] = useState(false);
   const [emergencyAlerts, setEmergencyAlerts] = useState(false);
-  const [communityUpdates, setCommunityUpdates] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -37,7 +36,7 @@ export default function NotificationPreferencesScreen() {
 
       setNearbyAlerts(preferences.nearbyAlerts);
       setEmergencyAlerts(preferences.emergencyAlerts);
-      setCommunityUpdates(preferences.communityUpdates);
+    
     } catch (error) {
       console.error("Failed to load notification preferences:", error);
     } finally {
@@ -172,35 +171,8 @@ useEffect(() => {
                 />
               </View>
             </View>
-
-            <View className="mx-4 border-t border-app-border" />
-
-            {/* Community Updates */}
-            <View className="px-4 py-4">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1 pr-4">
-                  <Text className="text-base font-semibold text-app-text">
-                    Community Safety Updates
-                  </Text>
-
-                  <Text className="mt-1 text-sm leading-5 text-app-muted">
-                    Get updates about safety activity in your area.
-                  </Text>
-                </View>
-
-                <Switch
-                  value={communityUpdates}
-                  onValueChange={setCommunityUpdates}
-                  trackColor={{
-                    false: "#B8ADBF",
-                    true: COLORS.primary,
-                  }}
-                  thumbColor="#FFFFFF"
-                  ios_backgroundColor="#B8ADBF"
-                />
-              </View>
-            </View>
           </View>
+            
 
           {/* Save Button */}
           <Pressable
@@ -212,7 +184,7 @@ useEffect(() => {
                       await updateNotificationPreferences({
                               nearbyAlerts,
                               emergencyAlerts,
-                              communityUpdates,
+                              
                       });
 
                     console.log("Notification preferences saved successfully");

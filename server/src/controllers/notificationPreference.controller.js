@@ -25,13 +25,13 @@ export async function updateNotificationPreferences(req, res) {
     const {
       nearbyAlerts,
       emergencyAlerts,
-      communityUpdates,
+      
     } = req.body;
 
     if (
       typeof nearbyAlerts !== "boolean" ||
-      typeof emergencyAlerts !== "boolean" ||
-      typeof communityUpdates !== "boolean"
+      typeof emergencyAlerts !== "boolean" 
+      
     ) {
       return res.status(400).json({
         message:
@@ -44,7 +44,7 @@ export async function updateNotificationPreferences(req, res) {
       {
         nearbyAlerts,
         emergencyAlerts,
-        communityUpdates,
+        
       }
     );
 
