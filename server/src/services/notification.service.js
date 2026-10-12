@@ -1,5 +1,6 @@
 import {
   getPushTokensByUserId,
+  getAllPushTokens,
 } from "../repositories/pushToken.repository.js";
 import { findUsersNearLocation } from "../repositories/user.repository.js";
 
@@ -88,3 +89,48 @@ export async function sendNearbyIncidentNotifications(incident) {
   }
 }
 
+export async function sendSOSNotificationsToAllUsers(sos) {
+  const pushTokens = await getAllPushTokens();
+
+  if (pushTokens.length === 0) {
+    console.log("No registered push tokens found for SOS.");
+    return;
+  }
+
+  const messages = pushTokens.map(({ token }) => ({
+    to: token,
+    title: "🚨 Emergency SOS Activated",
+    body: "Someone may need emergency assistance. Open SafeHer to respond.",
+    sound: "default",
+    priority: "high",
+    data: {
+      type: "EMERGENCY_SOS",
+      sosId: sos.id,
+      latitude: sos.latitude,
+      longitude: sos.longitude,
+    },
+  }));
+
+  // Send in batches of 100 messages.
+  for (let i = 0; i < messages.length; i += 100) {
+    const batch = messages.slice(i, i + 100);
+
+    const response = await fetch(
+      "https://exp.host/--/api/v2/push/send",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(batch),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("SOS push notification request failed:", await response.text());
+      continue;
+    }
+
+    console.log(`SOS notifications submitted: ${batch.length}`);
+  }
+}

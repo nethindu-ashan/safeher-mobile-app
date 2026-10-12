@@ -5,7 +5,7 @@ import {
   validateNearbyIncidents,
 } from "../validators/incident.validator.js";
 import { calculateDistance } from "../utils/distance.js";
-import { sendNearbyIncidentNotifications } from "./notification.service.js";
+
 
 export const createIncident = async (
   incidentData
@@ -58,15 +58,10 @@ export const createIncident = async (
     evidencePaths
   );
 
-  const incident =
-  await incidentRepository.createIncident({
-    ...incidentData,
-    evidencePaths,
-  });
-
-await sendNearbyIncidentNotifications(incident);
-
-return incident;
+    return incidentRepository.createIncident({
+      ...incidentData,
+      evidencePaths,
+    });
 };
 
 

@@ -7,7 +7,6 @@ export async function getNotificationPreferences() {
 export async function updateNotificationPreferences(data: {
   nearbyAlerts: boolean;
   emergencyAlerts: boolean;
-  communityUpdates: boolean;
 }) {
   return await apiRequest("/api/notification-preferences", {
     method: "PUT",

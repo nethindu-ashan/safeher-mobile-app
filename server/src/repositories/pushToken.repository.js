@@ -31,3 +31,11 @@ export async function deletePushToken(token) {
     },
   });
 }
+
+export async function getAllPushTokens() {
+  return await prisma.pushToken.findMany({
+    select: {
+      token: true,
+    },
+  });
+}

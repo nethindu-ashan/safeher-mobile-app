@@ -1,4 +1,5 @@
 import * as adminRepository from "../repositories/admin.repository.js";
+import { sendNearbyIncidentNotifications } from "./notification.service.js";
 
 const FILTER_STATUSES = [
   "Pending Review",
@@ -83,8 +84,15 @@ export const changeIncidentStatus =
       );
     }
 
-    return adminRepository.updateIncidentStatus(
-      id,
-      status
+    const updatedIncident =
+     await adminRepository.updateIncidentStatus(
+       id,
+       status
     );
+
+    if (status === "Verified") {
+       await sendNearbyIncidentNotifications(updatedIncident);
+    }
+
+  return updatedIncident;
   };
