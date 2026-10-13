@@ -6,6 +6,7 @@ import {
 
 import {
   ActivityIndicator,
+  Animated as RNAnimated,
   Pressable,
   Text,
   View,
@@ -85,6 +86,64 @@ const calculateDistanceKm = (
 
   return earthRadiusKm * c;
 };
+
+
+function LiveLocationIndicator() {
+  const blinkOpacity = useRef(new RNAnimated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(blinkOpacity, {
+          toValue: 0.2,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(blinkOpacity, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [blinkOpacity]);
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 14,
+      }}
+    >
+      <RNAnimated.View
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: "#16A34A",
+          marginRight: 10,
+          opacity: blinkOpacity,
+        }}
+      />
+
+      <Text
+        style={{
+          color: "#16A34A",
+          fontSize: 14,
+          fontWeight: "500",
+        }}
+      >
+        Live location tracking active
+      </Text>
+    </View>
+  );
+}
+
 
 export default function NavigationScreen() {
   const { selectedRoute } = useRouteContext();
@@ -818,9 +877,7 @@ export default function NavigationScreen() {
               )}
 
               {currentLocation && (
-                <Text className="mt-3 text-xs text-app-text-secondary">
-                  ● Live location tracking active
-                </Text>
+                <LiveLocationIndicator />
               )}
 
               <Pressable
