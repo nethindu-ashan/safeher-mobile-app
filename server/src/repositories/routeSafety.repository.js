@@ -40,6 +40,9 @@ const findIncidentsInBounds = async ({
       incidentDatetime: {
         gte: sinceDate,
       },
+
+      // Only approved/verified reports
+      status: "Verified",
     },
 
     /*
