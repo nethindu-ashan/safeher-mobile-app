@@ -87,73 +87,58 @@ export default function ForgotPasswordScreen() {
      RESET PASSWORD
      ========================================================== */
 
-  const handleResetPassword =
-    async () => {
-      const cleanEmail =
-        email
-          .trim()
-          .toLowerCase();
+  const handleResetPassword = async () => {
+  // Prevent duplicate requests
+  if (loading) return;
 
-      if (!cleanEmail) {
-        Alert.alert(
-          "Missing email",
-          "Please enter your email address."
-        );
+  const cleanEmail = email.trim().toLowerCase();
 
-        return;
-      }
+  // Check for an empty email
+  if (!cleanEmail) {
+    Alert.alert(
+      "Missing email",
+      "Please enter your email address."
+    );
+    return;
+  }
 
-      const emailRegex =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-      if (
-        !emailRegex.test(
-          cleanEmail
-        )
-      ) {
-        Alert.alert(
-          "Invalid email",
-          "Please enter a valid email address."
-        );
+  if (!emailRegex.test(cleanEmail)) {
+    Alert.alert(
+      "Invalid email",
+      "Please enter a valid email address."
+    );
+    return;
+  }
 
-        return;
-      }
+  try {
+    setLoading(true);
 
-      try {
-        setLoading(true);
+    await sendPasswordResetEmail(cleanEmail);
 
-        await sendPasswordResetEmail(
-          cleanEmail
-        );
+    Alert.alert(
+      "Check your email",
+      "If an account exists for this email address, password reset instructions have been sent.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.replace("/auth/sign-in"),
+        },
+      ]
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to send password reset email.";
 
-        Alert.alert(
-          "Check your email",
-          "If an account exists for this email address, password reset instructions have been sent.",
-          [
-            {
-              text: "OK",
-
-              onPress: () =>
-                router.replace(
-                  "/auth/sign-in"
-                ),
-            },
-          ]
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to send password reset email.";
-
-        Alert.alert(
-          "Reset failed",
-          message
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    Alert.alert("Reset failed", message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* ==========================================================
      FONT LOADING

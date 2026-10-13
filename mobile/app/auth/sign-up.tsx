@@ -108,90 +108,94 @@ const inputHeight = compact ? 47 : 50;
   ] = useState(false);
 
   const validateForm = () => {
-    const cleanName = fullName.trim();
+  const cleanName = fullName.trim();
+  const cleanEmail = email.trim().toLowerCase();
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+  // Full name
+  if (!cleanName) {
+    Alert.alert(
+      "Missing name",
+      "Please enter your full name."
+    );
+    return false;
+  }
 
-    if (!cleanName) {
-      Alert.alert(
-        "Missing name",
-        "Please enter your full name."
-      );
+  if (cleanName.length < 2) {
+    Alert.alert(
+      "Invalid name",
+      "Your name must contain at least 2 characters."
+    );
+    return false;
+  }
 
-      return false;
-    }
+  if (/\d/.test(cleanName)) {
+    Alert.alert(
+      "Invalid name",
+      "Your name cannot contain numbers."
+    );
+    return false;
+  }
 
-    if (cleanName.length < 2) {
-      Alert.alert(
-        "Invalid name",
-        "Please enter a valid full name."
-      );
+  // Email
+  if (!cleanEmail) {
+    Alert.alert(
+      "Missing email",
+      "Please enter your email address."
+    );
+    return false;
+  }
 
-      return false;
-    }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!cleanEmail) {
-      Alert.alert(
-        "Missing email",
-        "Please enter your email address."
-      );
+  if (!emailRegex.test(cleanEmail)) {
+    Alert.alert(
+      "Invalid email",
+      "Please enter a valid email address."
+    );
+    return false;
+  }
 
-      return false;
-    }
+  // Password
+  if (!password) {
+    Alert.alert(
+      "Missing password",
+      "Please enter a password."
+    );
+    return false;
+  }
 
-    const emailRegex =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (password.length < 8) {
+    Alert.alert(
+      "Weak password",
+      "Your password must contain at least 8 characters."
+    );
+    return false;
+  }
 
-    if (!emailRegex.test(cleanEmail)) {
-      Alert.alert(
-        "Invalid email",
-        "Please enter a valid email address."
-      );
+  // Confirm password
+  if (!confirmPassword) {
+    Alert.alert(
+      "Confirm password",
+      "Please enter your password again."
+    );
+    return false;
+  }
 
-      return false;
-    }
+  if (password !== confirmPassword) {
+    Alert.alert(
+      "Passwords do not match",
+      "Please make sure both passwords are the same."
+    );
+    return false;
+  }
 
-    if (!password) {
-      Alert.alert(
-        "Missing password",
-        "Please enter a password."
-      );
-
-      return false;
-    }
-
-    if (password.length < 8) {
-      Alert.alert(
-        "Weak password",
-        "Your password must contain at least 8 characters."
-      );
-
-      return false;
-    }
-
-    if (!confirmPassword) {
-      Alert.alert(
-        "Confirm password",
-        "Please enter your password again."
-      );
-
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert(
-        "Passwords do not match",
-        "Please make sure both passwords are the same."
-      );
-
-      return false;
-    }
-
-    return true;
-  };
+  return true;
+};
 
   const handleSignUp = async () => {
+
+    if (loading) return;
+    
     if (!validateForm()) {
       return;
     }

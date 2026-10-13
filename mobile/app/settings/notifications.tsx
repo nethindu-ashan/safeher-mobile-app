@@ -7,6 +7,7 @@ import {
   Switch,
   Text,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -177,7 +178,9 @@ useEffect(() => {
           {/* Save Button */}
           <Pressable
             className="mt-8 items-center rounded-xl bg-primary px-5 py-4 active:opacity-80"
+            disabled={saving || loading}
             onPress={async () => {
+              if (saving || loading) return;
                   try {
                       setSaving(true);
 
@@ -190,6 +193,10 @@ useEffect(() => {
                     console.log("Notification preferences saved successfully");
                   } catch (error) {
                     console.error("Failed to save notification preferences:", error);
+                    Alert.alert(
+                        "Save failed",
+                        "Unable to save your notification preferences. Please try again."
+                    );
                   } finally {
                     setSaving(false);
                   }
