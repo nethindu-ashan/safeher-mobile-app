@@ -7,6 +7,7 @@ import MapView, {
 } from "react-native-maps";
 
 import {
+  Animated,
   ScrollView,
   Text,
   View,
@@ -27,6 +28,78 @@ import { decodePolyline } from "../../src/utils/decodePolyline";
 import {getRouteSafetyIncidents, RouteSafetyIncident,} from "../../src/services/routeSafety.service";
 
 import { router } from "expo-router";
+
+// Blinking status indicator for incident reports
+
+
+function IncidentStatus({ status }: { status: string }) {
+  const blinkOpacity = useRef(new Animated.Value(1)).current;
+
+  const isVerified =
+    status?.trim().toLowerCase() === "verified";
+
+  useEffect(() => {
+    if (!isVerified) {
+      blinkOpacity.setValue(1);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkOpacity, {
+          toValue: 0.2,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(blinkOpacity, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [blinkOpacity, isVerified]);
+
+  return (
+    <View className="mt-3">
+      <Text className="text-xs text-app-text-secondary">
+        Status
+      </Text>
+
+      <View className="mt-2 flex-row items-center">
+        <Animated.View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: isVerified
+              ? "#DC2626"
+              : "#6B7280",
+            marginRight: 8,
+            opacity: blinkOpacity,
+          }}
+        />
+
+        <Text
+          className="text-sm font-semibold"
+          style={{
+            color: isVerified
+              ? "#DC2626"
+              : "#6B7280",
+          }}
+        >
+          {isVerified ? "Active" : status || "Unknown"}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+
 
 export default function RouteOptionsScreen() {
   const { selectedRoute } = useRouteContext();
@@ -160,6 +233,11 @@ export default function RouteOptionsScreen() {
                   latitudeDelta: 0.08,
                   longitudeDelta: 0.08,
                 }}
+
+                showsUserLocation={true}
+                showsMyLocationButton={true}
+                followsUserLocation={false}
+
                 onMapReady={() => {
                   mapRef.current?.fitToCoordinates(routeCoordinates, {
                     edgePadding: {
@@ -173,12 +251,7 @@ export default function RouteOptionsScreen() {
                 }}
               >
               
-              {/* Starting location */}
-              <Marker
-                coordinate={startCoordinate}
-                title="Starting Location"
-                description={selectedRoute.startLocation}
-              />
+              
 
               {/* Destination */}
               <Marker
@@ -235,9 +308,8 @@ export default function RouteOptionsScreen() {
                   {selectedIncident.description}
                 </Text>
 
-                <Text className="mt-3 text-xs text-app-text-secondary">
-                  Status: {selectedIncident.status}
-                </Text>
+                {/* Animated incident status */}
+                <IncidentStatus status={selectedIncident.status} />
 
               </View>
             )}

@@ -178,7 +178,7 @@ export default function AdminReportDetailsScreen() {
       status:
         AdminReviewStatus
     ) => {
-      if (!incident) {
+      if (!incident || updating) {
         return;
       }
 

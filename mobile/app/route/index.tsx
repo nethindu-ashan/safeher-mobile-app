@@ -39,10 +39,25 @@ import { useRouteContext } from "../../src/context/RouteContext";
 
 import * as Location from "expo-location";
 
+import {
+  getPlaceSuggestions,
+  getPlaceDetails,
+  type PlaceSuggestion,
+} from "../../src/services/places.service";
+
+
+const createPlacesSessionToken = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+
 export default function RouteScreen() {
   const { setSelectedRoute } = useRouteContext();
 
   const mapRef = useRef<MapView>(null);
+
+  const isSearchingRef = useRef(false);
+  const placesSessionRef = useRef(
+    createPlacesSessionToken()
+  );
 
   // Destination entered by the user.
   const [destination, setDestination] =
@@ -101,62 +116,211 @@ export default function RouteScreen() {
   const [isResultsExpanded, setIsResultsExpanded] =
     useState(true);
 
-  
+  const [suggestions, setSuggestions] =
+  useState<PlaceSuggestion[]>([]);
+
+  const [showSuggestions, setShowSuggestions] =
+    useState(false);
+
+  const [isSuggestionsLoading, setIsSuggestionsLoading] =
+    useState(false);
+
+  const [isSelectingPlace, setIsSelectingPlace] =
+    useState(false);
+    
 
   /*
    * Automatically get the user's
    * current location when the screen opens.
    */
   useEffect(() => {
-    const getCurrentLocation =
-      async () => {
-        try {
-          setIsGettingLocation(true);
-          setErrorMessage("");
+  let isMounted = true;
 
-          /*
-           * Request location permission.
-           */
-          const { status } =
-            await Location.requestForegroundPermissionsAsync();
+  const getCurrentLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      setErrorMessage("");
 
-          if (status !== "granted") {
-            setErrorMessage(
-              "Location permission is required to find your current location."
-            );
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
 
-            setIsGettingLocation(false);
-            return;
-          }
-
-          /*
-           * Get current GPS location.
-           */
-          const location =
-            await Location.getCurrentPositionAsync(
-              {
-                accuracy:
-                  Location.Accuracy.High,
-              }
-            );
-
-          setCurrentLocation(location);
-        } catch (error) {
-          console.error(
-            "Current location error:",
-            error
-          );
-
+      if (status !== "granted") {
+        if (isMounted) {
           setErrorMessage(
-            "Unable to get your current location."
+            "Location permission was denied. Enable location access in your device settings to find safe routes."
           );
-        } finally {
-          setIsGettingLocation(false);
         }
+        return;
+      }
+
+      const servicesEnabled =
+        await Location.hasServicesEnabledAsync();
+
+      if (!servicesEnabled) {
+        if (isMounted) {
+          setErrorMessage(
+            "Location Services are disabled. Enable GPS/location services and try again."
+          );
+        }
+        return;
+      }
+
+      const location =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+      const { latitude, longitude } = location.coords;
+
+      const validCoordinates =
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
+
+      if (!validCoordinates) {
+        if (isMounted) {
+          setErrorMessage(
+            "Your device returned an invalid location. Check your GPS settings and try again."
+          );
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setCurrentLocation(location);
+      }
+    } catch (error) {
+      console.error("Current location error:", error);
+
+      if (isMounted) {
+        setErrorMessage(
+          "Unable to determine your current location. Check your GPS settings and try again."
+        );
+      }
+    } finally {
+      if (isMounted) {
+        setIsGettingLocation(false);
+      }
+    }
+  };
+
+  void getCurrentLocation();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
+
+  
+  useEffect(() => {
+    const searchText = destination.trim();
+
+    if (!showSuggestions || searchText.length < 2) {
+      setSuggestions([]);
+      setIsSuggestionsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let isActive = true;
+
+    setIsSuggestionsLoading(true);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await getPlaceSuggestions(
+          searchText,
+          placesSessionRef.current,
+          currentLocation?.coords.latitude,
+          currentLocation?.coords.longitude,
+          controller.signal
+        );
+
+        if (isActive) {
+          setSuggestions(results);
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error("Autocomplete error:", error);
+          setSuggestions([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsSuggestionsLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    destination,
+    showSuggestions,
+    currentLocation?.coords.latitude,
+    currentLocation?.coords.longitude,
+  ]);
+
+
+  
+  const handleSelectSuggestion = async (
+    suggestion: PlaceSuggestion
+  ) => {
+    setShowSuggestions(false);
+    setSuggestions([]);
+    Keyboard.dismiss();
+
+    setIsSelectingPlace(true);
+
+    try {
+      const place = await getPlaceDetails(
+        suggestion.placeId,
+        placesSessionRef.current
+      );
+
+      const coordinates = {
+        latitude: place.latitude,
+        longitude: place.longitude,
       };
 
-    getCurrentLocation();
-  }, []);
+      // Display the selected place.
+      setDestination(
+        suggestion.description || suggestion.title
+      );
+
+      // Store exact coordinates for route search.
+      setSelectedDestination(coordinates);
+
+      setErrorMessage("");
+
+      // Move map to selected destination.
+      mapRef.current?.animateToRegion(
+        {
+          ...coordinates,
+          latitudeDelta: 0.03,
+          longitudeDelta: 0.03,
+        },
+        500
+      );
+    } catch (error) {
+      console.error("Place selection error:", error);
+
+      setErrorMessage(
+        "Unable to select this destination. Please try again."
+      );
+    } finally {
+      placesSessionRef.current =
+        createPlacesSessionToken();
+
+      setIsSelectingPlace(false);
+    }
+  };
+
 
   /*
    * Search routes using:
@@ -167,6 +331,12 @@ export default function RouteScreen() {
    */
   const handleSearchRoutes = async () => {
     Keyboard.dismiss();
+    setShowSuggestions(false);
+    setSuggestions([]);
+
+    if (isSearchingRef.current || isLoading) {
+      return;
+    }
 
     const destinationValue =
       destination.trim();
@@ -182,7 +352,43 @@ export default function RouteScreen() {
       return;
     }
 
-    let destinationCoordinates = selectedDestination;
+    if (destinationValue.length < 2) {
+       setErrorMessage(
+         "Please enter a more specific destination."
+      );
+     return;
+    }
+
+    // Validate the starting location before geocoding.
+  if (!currentLocation) {
+    setErrorMessage(
+      "Your current location is unavailable. Check location permission and GPS settings, then try again."
+    );
+    return;
+  }
+
+  const { latitude, longitude } = currentLocation.coords;
+
+  const validStartCoordinates =
+  Number.isFinite(latitude) &&
+  Number.isFinite(longitude) &&
+  latitude >= -90 &&
+  latitude <= 90 &&
+  longitude >= -180 &&
+  longitude <= 180;
+
+  if (!validStartCoordinates) {
+  setErrorMessage(
+    "Your starting location is invalid. Please refresh your current location and try again."
+  );
+  return;
+ }
+
+   
+    isSearchingRef.current = true;
+setIsLoading(true);
+
+let destinationCoordinates = selectedDestination;
 
     if (!destinationCoordinates) {
       try {
@@ -207,46 +413,55 @@ export default function RouteScreen() {
             },
             500
           );
-
         }
       } catch (error) {
-        console.error(
-          "Destination geocoding error:",
-          error
-        );
+        console.error("Destination geocoding error:", error);
       }
     }
 
     /*
-     * Current location must be available.
+     * Lock the search and clear previous data.
      */
-    if (!currentLocation) {
-      setErrorMessage(
-        "Your current location is not available yet. Please wait a moment and try again."
-      );
 
-      return;
-    }
-
-    /*
-     * Clear previous data.
-     */
     setErrorMessage("");
-    setRoutes([]);
-    setRouteComparisons([]);
-    setRouteIncidentCounts({});
-    setComparisonError("");
-    setRecommendedRouteId(null);
+   setRoutes([]);
+   setRouteComparisons([]);
+   setRouteIncidentCounts({});
+   setComparisonError("");
+   setRecommendedRouteId(null);
 
-    /*
-     * Open results sheet when
-     * new search starts.
-     */
-    setIsResultsExpanded(true);
+/*
+ * Open results sheet when new search starts.
+ */
+   setIsResultsExpanded(true);
+
+   // Validate destination coordinates before calling the backend.
+if (destinationCoordinates) {
+  const {
+    latitude,
+    longitude,
+  } = destinationCoordinates;
+
+  const validDestinationCoordinates =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  if (!validDestinationCoordinates) {
+    setErrorMessage(
+      "The selected destination has invalid coordinates. Please select it again."
+    );
+
+    setIsLoading(false);
+    isSearchingRef.current = false;
+    return;
+  }
+}
 
     try {
-      setIsLoading(true);
-
       /*
        * Send current GPS coordinates
        * and destination to backend.
@@ -412,6 +627,7 @@ export default function RouteScreen() {
       );
     } finally {
       setIsLoading(false);
+      isSearchingRef.current = false;
     }
   };
 
@@ -467,10 +683,17 @@ export default function RouteScreen() {
           />
         </View>
 
+        
         {/* Floating Destination Search */}
-        <View className="absolute left-0 right-0 top-20 z-10 px-5">
+        <View
+          className="absolute left-0 right-0 top-20 px-5"
+          style={{
+            zIndex: 100,
+            elevation: 20,
+          }}
+        >
+          {/* Destination Input + Search Button */}
           <View className="flex-row items-center">
-
             <TextInput
               className="flex-1 rounded-full border border-app-border bg-white px-5 py-3 text-base text-app-text"
               placeholder="Enter destination"
@@ -479,22 +702,176 @@ export default function RouteScreen() {
               onChangeText={(text) => {
                 setDestination(text);
                 setSelectedDestination(null);
+                setShowSuggestions(text.trim().length >= 2);
+              }}
+              onFocus={() => {
+                if (destination.trim().length >= 2) {
+                  setShowSuggestions(true);
+                }
               }}
               autoCapitalize="words"
               returnKeyType="search"
-              onSubmitEditing={handleSearchRoutes}
+              onSubmitEditing={() => {
+                if (!isSelectingPlace) {
+                  handleSearchRoutes();
+                }
+              }}
             />
 
             <Pressable
               onPress={handleSearchRoutes}
-              disabled={isLoading || isGettingLocation}
+              disabled={
+                isLoading ||
+                isGettingLocation ||
+                isSelectingPlace ||
+                isSearchingRef.current
+              }
               className="ml-2 h-11 w-11 items-center justify-center rounded-full bg-primary"
             >
-              <Text className="text-lg text-white">🔍</Text>
+              <Text className="text-lg text-white">
+                🔍
+              </Text>
             </Pressable>
-
           </View>
+
+          {/* Google Places Suggestions */}
+          {showSuggestions && (
+            <View
+              style={{
+                marginTop: 8,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "#EAE6EE",
+                overflow: "hidden",
+                shadowColor: "#000000",
+                shadowOpacity: 0.13,
+                shadowRadius: 12,
+                elevation: 12,
+              }}
+            >
+              {isSuggestionsLoading ? (
+                <View
+                  style={{
+                    padding: 20,
+                    alignItems: "center",
+                  }}
+                >
+                  <ActivityIndicator color="#7C3AED" />
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      color: "#6B6470",
+                      fontSize: 13,
+                    }}
+                  >
+                    Searching destinations...
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={{ maxHeight: 270 }}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {suggestions.map((item, index) => {
+                    const isCity =
+                      item.types.includes("locality") ||
+                      item.types.includes("administrative_area_level_2");
+
+                    return (
+                      <Pressable
+                        key={item.placeId}
+                        onPress={() =>
+                          handleSelectSuggestion(item)
+                        }
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingHorizontal: 15,
+                          paddingVertical: 13,
+                          borderBottomWidth:
+                            index === suggestions.length - 1
+                              ? 0
+                              : 1,
+                          borderBottomColor: "#F0EDF2",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 21,
+                            marginRight: 12,
+                          }}
+                        >
+                          {isCity ? "🏙️" : "📍"}
+                        </Text>
+
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              fontSize: 15,
+                              fontWeight: "600",
+                              color: "#211B2B",
+                            }}
+                          >
+                            {item.title}
+                          </Text>
+
+                          {!!item.subtitle && (
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                fontSize: 12,
+                                color: "#837C89",
+                                marginTop: 3,
+                              }}
+                            >
+                              {item.subtitle}
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+
+                  {suggestions.length === 0 && (
+                    <Text
+                      style={{
+                        padding: 16,
+                        fontSize: 13,
+                        color: "#837C89",
+                        textAlign: "center",
+                      }}
+                    >
+                      No matching destinations found
+                    </Text>
+                  )}
+                </ScrollView>
+              )}
+
+              <View
+                style={{
+                  paddingHorizontal: 15,
+                  paddingVertical: 8,
+                  alignItems: "flex-end",
+                  borderTopWidth: 1,
+                  borderTopColor: "#F0EDF2",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: "#77717F",
+                  }}
+                >
+                  Powered by Google Maps
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
+
         
         {/* =====================================
             MAP
@@ -508,6 +885,8 @@ export default function RouteScreen() {
               height: "100%",
             }}
             onPress={async (event) => {
+              setShowSuggestions(false);
+              setSuggestions([]);
               Keyboard.dismiss();
 
               const {
@@ -557,10 +936,11 @@ export default function RouteScreen() {
                 );
               }
             }}
-            showsUserLocation={
-              !!currentLocation
-            }
+
+            showsUserLocation={true}
             showsMyLocationButton={true}
+            followsUserLocation={false}
+            
             initialRegion={{
               latitude:
                 currentLocation?.coords
@@ -574,21 +954,7 @@ export default function RouteScreen() {
               longitudeDelta: 0.15,
             }}
           >
-            {currentLocation && (
-              <Marker
-                coordinate={{
-                  latitude:
-                    currentLocation.coords
-                      .latitude,
-
-                  longitude:
-                    currentLocation.coords
-                      .longitude,
-                }}
-                title="Current Location"
-              />
-            )}
-
+            
             {selectedDestination && (
               <Marker
                 coordinate={selectedDestination}

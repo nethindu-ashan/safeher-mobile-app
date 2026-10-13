@@ -10,130 +10,219 @@ import {
 } from "react";
 
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
+  StatusBar,
   Text,
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
-import { activateSOS } from "../../src/services/sosService";
+import {
+  activateSOS,
+} from "../../src/services/sosService";
 
-import { COLORS } from "../../src/constants/theme";
+/* ============================================================
+   COLORS
+   ============================================================ */
+
+const SOS_RED = "#D92D20";
+
+/* ============================================================
+   SCREEN
+   ============================================================ */
 
 export default function SOSCountdownScreen() {
-  const [countdown, setCountdown] = useState(3);
+  /* ==========================================================
+     STATE
+     ========================================================== */
 
-  const [activating, setActivating] = useState(false);
+  const [
+    countdown,
+    setCountdown,
+  ] = useState(3);
 
-  // Prevents the SOS API from being called more than once
-  const activationStarted = useRef(false);
+  const [
+    activating,
+    setActivating,
+  ] = useState(false);
 
   /*
-   * Activate Emergency SOS
-   * 1. Ask for location permission
-   * 2. Get current GPS location
-   * 3. Send SOS data to backend
-   * 4. Navigate to active SOS screen
+   * Prevent SOS API from
+   * being called more than once.
    */
-  const activateEmergencySOS = useCallback(async () => {
-    try {
-      setActivating(true);
+  const activationStarted =
+    useRef(false);
 
-      // Ask user for location permission
-      const { status } =
-        await Location.requestForegroundPermissionsAsync();
+  /* ==========================================================
+     ACTIVATE SOS
+     ========================================================== */
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Location Required",
-          "Location permission is required to activate Emergency SOS."
-        );
+  const activateEmergencySOS =
+    useCallback(
+      async () => {
+        try {
+          setActivating(true);
 
-        router.back();
-        return;
-      }
+          /* ===============================================
+             REQUEST LOCATION PERMISSION
+             =============================================== */
 
-      // Get current phone location
-      const location =
-        await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+          const {
+            status,
+          } =
+            await Location.requestForegroundPermissionsAsync();
 
-      // Data sent to backend
-      const payload = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        message: "I need emergency assistance.",
-      };
+          if (
+            status !== "granted"
+          ) {
+            Alert.alert(
+              "Location Required",
+              "Location permission is required to activate Emergency SOS."
+            );
 
-      console.log("Activating SOS:", payload);
+            router.back();
 
-      // POST /api/sos
-      const response = await activateSOS(payload);
+            return;
+          }
 
-      console.log("SOS response:", response);
+          /* ===============================================
+             GET CURRENT LOCATION
+             =============================================== */
 
-      // Make sure backend returned an SOS ID
-      if (!response?.data?.id) {
-        throw new Error(
-          "SOS was created but no SOS ID was returned."
-        );
-      }
+          const location =
+            await Location.getCurrentPositionAsync({
+              accuracy:
+                Location.Accuracy.High,
+            });
 
-      // Go to SOS Active screen
-      router.replace({
-        pathname: "/report/sos-active",
+          /* ===============================================
+             CREATE SOS DATA
+             =============================================== */
 
-        params: {
-          id: response.data.id,
+          const payload = {
+            latitude:
+              location.coords
+                .latitude,
 
-          latitude: String(
-            response.data.latitude
-          ),
+            longitude:
+              location.coords
+                .longitude,
 
-          longitude: String(
-            response.data.longitude
-          ),
+            message:
+              "I need emergency assistance.",
+          };
 
-          status:
-            response.data.status ?? "ACTIVE",
-        },
-      });
-    } catch (error) {
-      console.error(
-        "SOS activation error:",
-        error
-      );
+          console.log(
+            "Activating SOS:",
+            payload
+          );
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to activate SOS.";
+          /* ===============================================
+             SEND TO BACKEND
+             =============================================== */
 
-      Alert.alert(
-        "SOS Activation Failed",
-        message,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              router.back();
+          const response =
+            await activateSOS(
+              payload
+            );
+
+          console.log(
+            "SOS response:",
+            response
+          );
+
+          /* ===============================================
+             VALIDATE RESPONSE
+             =============================================== */
+
+          if (
+            !response?.data?.id
+          ) {
+            throw new Error(
+              "SOS was created but no SOS ID was returned."
+            );
+          }
+
+          /* ===============================================
+             GO TO ACTIVE SOS
+             =============================================== */
+
+          router.replace({
+            pathname:
+              "/report/sos-active",
+
+            params: {
+              id:
+                response.data.id,
+
+              latitude:
+                String(
+                  response.data
+                    .latitude
+                ),
+
+              longitude:
+                String(
+                  response.data
+                    .longitude
+                ),
+
+              status:
+                response.data
+                  .status ??
+                "ACTIVE",
             },
-          },
-        ]
-      );
-    } finally {
-      setActivating(false);
-    }
-  }, []);
+          });
+        } catch (error) {
+          console.error(
+            "SOS activation error:",
+            error
+          );
 
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Unable to activate SOS.";
+
+          Alert.alert(
+            "SOS Activation Failed",
+            message,
+            [
+              {
+                text: "OK",
+
+                onPress: () => {
+                  router.back();
+                },
+              },
+            ]
+          );
+        } finally {
+          setActivating(false);
+        }
+      },
+      []
+    );
+
+  /* ==========================================================
+     COUNTDOWN
+     ========================================================== */
 
   useEffect(() => {
-    if (countdown <= 0) {
-      if (!activationStarted.current) {
-        activationStarted.current = true;
+    if (
+      countdown <= 0
+    ) {
+      if (
+        !activationStarted
+          .current
+      ) {
+        activationStarted.current =
+          true;
 
         activateEmergencySOS();
       }
@@ -141,11 +230,13 @@ export default function SOSCountdownScreen() {
       return;
     }
 
-    const timer = setTimeout(() => {
-      setCountdown(
-        (current) => current - 1
-      );
-    }, 1000);
+    const timer =
+      setTimeout(() => {
+        setCountdown(
+          (current) =>
+            current - 1
+        );
+      }, 1000);
 
     return () => {
       clearTimeout(timer);
@@ -155,59 +246,148 @@ export default function SOSCountdownScreen() {
     activateEmergencySOS,
   ]);
 
-  // Cancel before the SOS becomes active
-  const cancelCountdown = () => {
-    router.back();
-  };
+  /* ==========================================================
+     CANCEL SOS
+     ========================================================== */
+
+  const cancelCountdown =
+    () => {
+      /*
+       * Stop SOS from activating
+       * if user cancels.
+       */
+      activationStarted.current =
+        true;
+
+      router.back();
+    };
+
+  /* ==========================================================
+     UI
+     ========================================================== */
 
   return (
     <SafeAreaView
+      edges={[
+        "top",
+        "bottom",
+      ]}
+      className="flex-1"
       style={{
-        flex: 1,
-        backgroundColor: COLORS.sos,
+        backgroundColor:
+          SOS_RED,
       }}
     >
-      <View className="flex-1 items-center justify-center px-6">
-        <Ionicons
-          name="warning-outline"
-          size={50}
-          color="#FFFFFF"
-        />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={
+          SOS_RED
+        }
+      />
 
-        <Text className="mt-6 text-center text-2xl font-bold text-white">
-          Emergency SOS
-        </Text>
+      <View className="flex-1 px-6">
+        {/* ==================================================
+            MAIN
+            ================================================== */}
 
-        <Text className="mt-3 text-center text-white">
-          {activating
-            ? "Activating Emergency SOS..."
-            : "SOS will activate in"}
-        </Text>
+        <View className="flex-1 items-center justify-center">
+          {/* WARNING ICON */}
 
-        {/* Countdown */}
-        {!activating && (
-          <Text className="mt-8 text-8xl font-bold text-white">
-            {countdown}
+          <View className="h-16 w-16 items-center justify-center rounded-full bg-white/15">
+            <Ionicons
+              name="warning"
+              size={30}
+              color="#FFFFFF"
+            />
+          </View>
+
+          {/* TITLE */}
+
+          <Text className="mt-5 text-center text-[22px] font-bold text-white">
+            Emergency SOS
           </Text>
-        )}
 
-        {/* Loading message */}
-        {activating && (
-          <Text className="mt-8 text-lg font-semibold text-white">
-            Getting your location...
-          </Text>
-        )}
+          {/* ===============================================
+              COUNTDOWN STATE
+              =============================================== */}
 
-        {/* Cancel before activation */}
+          {!activating ? (
+            <>
+              <Text className="mt-2 text-center text-[11px] text-white/85">
+                SOS will activate in
+              </Text>
+
+              {/* COUNTDOWN */}
+
+              <Text className="mt-5 text-[96px] font-bold leading-[110px] text-white">
+                {countdown}
+              </Text>
+
+              <Text className="text-[10px] font-semibold uppercase tracking-[1.5px] text-white/80">
+                Seconds
+              </Text>
+            </>
+          ) : (
+            /* =============================================
+               ACTIVATING STATE
+               ============================================= */
+
+            <View className="mt-10 items-center">
+              <ActivityIndicator
+                size="large"
+                color="#FFFFFF"
+              />
+
+              <Text className="mt-5 text-[15px] font-semibold text-white">
+                Activating SOS...
+              </Text>
+
+              <Text className="mt-2 text-center text-[10px] text-white/80">
+                Getting your location
+                and sending the alert.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* ==================================================
+            CANCEL BUTTON
+            ================================================== */}
+
         {!activating && (
-          <Pressable
-            onPress={cancelCountdown}
-            className="mt-14 w-full items-center rounded-full bg-white py-4 active:opacity-80"
-          >
-            <Text className="font-bold text-sos">
-              Cancel SOS
+          <View className="pb-5">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel SOS"
+              onPress={
+                cancelCountdown
+              }
+              className="h-[54px] flex-row items-center justify-center rounded-[16px] bg-white active:opacity-85"
+            >
+              <Ionicons
+                name="close"
+                size={20}
+                color={
+                  SOS_RED
+                }
+              />
+
+              <Text
+                className="ml-2 text-[13px] font-bold"
+                style={{
+                  color:
+                    SOS_RED,
+                }}
+              >
+                Cancel SOS
+              </Text>
+            </Pressable>
+
+            <Text className="mt-3 text-center text-[8.5px] text-white/75">
+              SOS activates automatically
+              when the countdown reaches zero.
             </Text>
-          </Pressable>
+          </View>
         )}
       </View>
     </SafeAreaView>

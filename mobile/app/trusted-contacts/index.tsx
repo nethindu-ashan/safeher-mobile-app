@@ -35,6 +35,17 @@ import type {
   TrustedContact,
 } from "../../src/services/trustedContactService";
 
+const normalizePhone = (value: string) =>
+  value.replace(/[\s\-().]/g, "");
+
+const isValidPhone = (value: string) => {
+  const normalized = normalizePhone(value);
+
+  // Accept international numbers with a leading +
+  // or a local number containing 7–15 digits.
+  return /^\+?[0-9]{7,15}$/.test(normalized);
+};
+
 export default function TrustedContactsScreen() {
   const {
     isAuthenticated,
@@ -146,68 +157,132 @@ export default function TrustedContactsScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert(
-        "Name required",
-        "Please enter the trusted contact name."
-      );
-      return;
+  if (saving) return;
+
+  const cleanName = name.trim();
+  const cleanPhone = normalizePhone(phone);
+  const cleanRelationship = relationship.trim();
+
+  // Validate contact name.
+  if (!cleanName) {
+    Alert.alert(
+      "Name required",
+      "Please enter the trusted contact's name."
+    );
+    return;
+  }
+
+  if (cleanName.length < 2 || cleanName.length > 80) {
+    Alert.alert(
+      "Invalid name",
+      "The contact name must contain between 2 and 80 characters."
+    );
+    return;
+  }
+
+  if (!/^[\p{L}\p{M}][\p{L}\p{M}\s.'’-]*$/u.test(cleanName)) {
+    Alert.alert(
+      "Invalid name",
+      "Please enter a valid name without numbers or special symbols."
+    );
+    return;
+  }
+
+  // Validate phone number.
+  if (!cleanPhone) {
+    Alert.alert(
+      "Phone required",
+      "Please enter the trusted contact's phone number."
+    );
+    return;
+  }
+
+  if (!isValidPhone(cleanPhone)) {
+    Alert.alert(
+      "Invalid phone number",
+      "Enter a valid phone number containing 7–15 digits. You can include your country code."
+    );
+    return;
+  }
+
+  // Normalize Sri Lankan local and international formats
+  // so 0771234567 and +94771234567 are treated as duplicates.
+  const canonicalPhone = (value: string) => {
+    const normalized = normalizePhone(value);
+
+    if (/^0\d{9}$/.test(normalized)) {
+      return `94${normalized.slice(1)}`;
     }
 
-    if (!phone.trim()) {
-      Alert.alert(
-        "Phone required",
-        "Please enter the trusted contact phone number."
-      );
-      return;
+    if (/^\+94\d{9}$/.test(normalized)) {
+      return normalized.slice(1);
     }
 
-    try {
-      setSaving(true);
-
-      const payload = {
-        name: name.trim(),
-        phone: phone.trim(),
-        relationship:
-          relationship.trim(),
-        isPrimary,
-      };
-
-      if (editingContact) {
-        await updateTrustedContact(
-          editingContact.id,
-          payload
-        );
-      } else {
-        await addTrustedContact(
-          payload
-        );
-      }
-
-      closeModal();
-
-      await loadContacts();
-
-      Alert.alert(
-        "Success",
-        editingContact
-          ? "Trusted contact updated successfully."
-          : "Trusted contact added successfully."
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to save trusted contact.";
-
-      Alert.alert(
-        "Unable to save",
-        message
-      );
-    } finally {
-      setSaving(false);
-    }
+    return normalized.startsWith("+")
+      ? normalized.slice(1)
+      : normalized;
   };
+
+  // Reject duplicate numbers, excluding the contact being edited.
+  const duplicateContact = contacts.find((contact) => {
+    if (editingContact && contact.id === editingContact.id) {
+      return false;
+    }
+
+    return (
+      canonicalPhone(contact.phone) ===
+      canonicalPhone(cleanPhone)
+    );
+  });
+
+  if (duplicateContact) {
+    Alert.alert(
+      "Duplicate contact",
+      "This phone number already belongs to another trusted contact. Please use a different number."
+    );
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    const payload = {
+      name: cleanName,
+      phone: cleanPhone,
+      relationship: cleanRelationship,
+      isPrimary,
+    };
+
+    if (editingContact) {
+      await updateTrustedContact(
+        editingContact.id,
+        payload
+      );
+    } else {
+      await addTrustedContact(payload);
+    }
+
+    closeModal();
+
+    await loadContacts();
+
+    Alert.alert(
+      "Success",
+      editingContact
+        ? "Trusted contact updated successfully."
+        : "Trusted contact added successfully."
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to save trusted contact.";
+
+    Alert.alert("Unable to save", message);
+  } finally {
+    setSaving(false);
+  }
+};
 
   const handleMakePrimary = (
     contact: TrustedContact
@@ -674,6 +749,9 @@ export default function TrustedContactsScreen() {
               keyboardType="phone-pad"
               placeholder="+94771234567"
               placeholderTextColor="#A995B5"
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={20}
               className="mt-2 rounded-2xl border border-app-border bg-white px-4 py-4 text-app-text"
             />
 

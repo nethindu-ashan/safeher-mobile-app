@@ -1,227 +1,689 @@
-import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import { router } from "expo-router";
 
 import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  ActivityIndicator,
   Alert,
+  Pressable,
+  StatusBar,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import MapView, {
-  MapPressEvent,
-  Marker,
-  //PROVIDER_GOOGLE,
   Region,
 } from "react-native-maps";
 
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import PrimaryButton from "../../src/components/PrimaryButton";
-import ScreenHeader from "../../src/components/ScreenHeader";
-
 import {
-  useIncidentReport,
-} from "../../src/context/IncidentReportContext";
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
 import {
   COLORS,
 } from "../../src/constants/theme";
 
+import {
+  useIncidentReport,
+} from "../../src/context/IncidentReportContext";
+
+/* ============================================================
+   DEFAULT REGION
+   ============================================================ */
+
 const DEFAULT_REGION: Region = {
   latitude: 6.9271,
   longitude: 79.8612,
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
+  latitudeDelta: 0.015,
+  longitudeDelta: 0.015,
 };
 
+/* ============================================================
+   SCREEN
+   ============================================================ */
+
 export default function SelectLocationScreen() {
+  const { height } =
+    useWindowDimensions();
+
+  const compact =
+    height < 780;
+
+  const mapRef =
+    useRef<MapView | null>(
+      null
+    );
+
+  /* ==========================================================
+     CONTEXT
+     ========================================================== */
+
   const {
     draft,
     updateDraft,
   } = useIncidentReport();
 
-  const [region, setRegion] =
-    useState<Region>(DEFAULT_REGION);
+  /* ==========================================================
+     EXISTING LOCATION
+     ========================================================== */
 
-  const [selectedLocation, setSelectedLocation] =
-    useState<{
-      latitude: number;
-      longitude: number;
-    } | null>(
-      draft.latitude !== null &&
-      draft.longitude !== null
-        ? {
-            latitude: draft.latitude,
-            longitude: draft.longitude,
-          }
-        : null
-    );
+  const existingLocation =
+    draft.latitude !== null &&
+    draft.longitude !== null
+      ? {
+          latitude:
+            draft.latitude,
 
-  useEffect(() => {
-    const loadCurrentLocation = async () => {
-      try {
-        // Ask permission to access current location
-        const { status } =
-          await Location.requestForegroundPermissionsAsync();
-
-        if (status !== "granted") {
-          Alert.alert(
-            "Location Permission",
-            "Location permission was not granted. You can still select the incident location manually on the map."
-          );
-
-          return;
+          longitude:
+            draft.longitude,
         }
+      : null;
 
-        // Get current device location
-        const location =
-          await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
+  /* ==========================================================
+     STATE
+     ========================================================== */
 
-        const coordinates = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        };
+  const [
+    selectedLocation,
+    setSelectedLocation,
+  ] = useState<{
+    latitude: number;
+    longitude: number;
+  }>(
+    existingLocation ?? {
+      latitude:
+        DEFAULT_REGION.latitude,
 
-        // Move map to current location
-        setRegion({
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        });
+      longitude:
+        DEFAULT_REGION.longitude,
+    }
+  );
 
-        // Automatically select current location only
-        // if user has not selected a location before
-        if (
-          draft.latitude === null ||
-          draft.longitude === null
-        ) {
-          setSelectedLocation(coordinates);
-        }
-      } catch (error) {
-        console.error(
-          "Unable to get current location:",
-          error
-        );
+  const [
+    locating,
+    setLocating,
+  ] = useState(false);
 
-        Alert.alert(
-          "Location Error",
-          "Unable to get your current location. Please select the incident location manually on the map."
-        );
-      }
+  const [
+    mapReady,
+    setMapReady,
+  ] = useState(false);
+
+  const isLocatingRef = useRef(false);
+const isConfirmingRef = useRef(false);
+
+  /* ==========================================================
+     MOVE MAP TO LOCATION
+     ========================================================== */
+
+  const moveMapToLocation = (
+    latitude: number,
+    longitude: number
+  ) => {
+    const nextRegion: Region = {
+      latitude,
+      longitude,
+      latitudeDelta: 0.012,
+      longitudeDelta: 0.012,
     };
 
-    loadCurrentLocation();
-  }, [draft.latitude, draft.longitude]);
-
-  // Runs when user taps on the map
-  const handleMapPress = (
-    event: MapPressEvent
-  ) => {
-    const coordinate =
-      event.nativeEvent.coordinate;
-
     setSelectedLocation({
-      latitude: coordinate.latitude,
-      longitude: coordinate.longitude,
+      latitude,
+      longitude,
     });
+
+    mapRef.current?.animateToRegion(
+      nextRegion,
+      500
+    );
   };
 
-  // Save the selected location in IncidentReportContext
-  const handleConfirm = () => {
-    if (!selectedLocation) {
-      Alert.alert(
-        "Select Location",
-        "Please select an incident location on the map."
-      );
+  /* ==========================================================
+     CURRENT LOCATION
+     ========================================================== */
+
+  const getCurrentLocation = async (showAlert = true) => {
+  if (isLocatingRef.current) return;
+
+  isLocatingRef.current = true;
+  setLocating(true);
+
+  try {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      if (showAlert) {
+        Alert.alert(
+          "Location Permission Required",
+          "Location access was not granted. You can still move the map manually to select where the incident happened."
+        );
+      }
 
       return;
     }
 
+    const servicesEnabled =
+      await Location.hasServicesEnabledAsync();
+
+    if (!servicesEnabled) {
+      if (showAlert) {
+        Alert.alert(
+          "GPS Unavailable",
+          "Please enable Location Services on your device, or move the map manually to select the incident location."
+        );
+      }
+
+      return;
+    }
+
+    const location =
+      await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+    const { latitude, longitude } = location.coords;
+
+    const validCoordinates =
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
+
+    if (!validCoordinates) {
+      if (showAlert) {
+        Alert.alert(
+          "Invalid Location",
+          "Your device returned invalid coordinates. Please try again or select the location manually."
+        );
+      }
+
+      return;
+    }
+
+    moveMapToLocation(latitude, longitude);
+  } catch (error) {
+    console.error("Unable to get current location:", error);
+
+    if (showAlert) {
+      Alert.alert(
+        "Location Unavailable",
+        "Unable to determine your current location. Check your GPS settings or move the map manually."
+      );
+    }
+  } finally {
+    isLocatingRef.current = false;
+    setLocating(false);
+  }
+};
+
+  /* ==========================================================
+     INITIAL LOCATION
+     ========================================================== */
+
+  useEffect(() => {
+    /*
+     * If the user already selected a location,
+     * keep that location when opening this page again.
+     */
+
+    if (existingLocation) {
+      return;
+    }
+
+    /*
+     * Otherwise try to move the map
+     * to the user's current location.
+     */
+
+    getCurrentLocation(false);
+
+    // Run only once when screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ==========================================================
+     MAP MOVED
+     ========================================================== */
+
+  const handleRegionChangeComplete = (
+    region: Region
+  ) => {
+    /*
+     * The pin stays fixed in the middle.
+     * Therefore the center of the map
+     * becomes the selected location.
+     */
+
+    setSelectedLocation({
+      latitude:
+        region.latitude,
+
+      longitude:
+        region.longitude,
+    });
+  };
+
+  /* ==========================================================
+     CONFIRM LOCATION
+     ========================================================== */
+
+  const handleConfirm = () => {
+  if (isConfirmingRef.current) return;
+
+  if (!mapReady) {
+    Alert.alert(
+      "Map Not Ready",
+      "Please wait for the map to finish loading before confirming the location."
+    );
+    return;
+  }
+
+  if (locating || isLocatingRef.current) {
+    Alert.alert(
+      "Finding Location",
+      "Please wait until your current location has been determined, or select a location manually."
+    );
+    return;
+  }
+
+  const { latitude, longitude } = selectedLocation;
+
+  const validCoordinates =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  if (!validCoordinates) {
+    Alert.alert(
+      "Invalid Location",
+      "Please select a valid location on the map before continuing."
+    );
+    return;
+  }
+
+  isConfirmingRef.current = true;
+
+  try {
     updateDraft({
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude,
+      latitude,
+      longitude,
     });
 
-    // Return to Report Incident screen
-    router.back();
-  };
+    router.replace("/report/review");
+  } catch (error) {
+    isConfirmingRef.current = false;
+
+    Alert.alert(
+      "Unable to Save Location",
+      "We couldn't save the selected location. Please try again."
+    );
+  }
+};
+
+  /* ==========================================================
+     UI
+     ========================================================== */
 
   return (
     <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: COLORS.background,
-      }}
+      edges={[
+        "top",
+        "bottom",
+      ]}
+      className="flex-1 bg-white"
     >
-      <View className="flex-1 px-5">
-        <ScreenHeader title="Select Location" />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#FFFFFF"
+      />
 
-        <Text className="mb-4 text-sm leading-5 text-app-muted">
-          Tap anywhere on the map to select where the
-          incident happened.
-        </Text>
+      <View className="flex-1">
+        {/* ==================================================
+            FULL MAP
+            ================================================== */}
 
-        {/* Google Map */}
-        <View className="flex-1 overflow-hidden rounded-2xl border border-app-border">
-          <MapView
-            //provider={PROVIDER_GOOGLE}
+        <MapView
+          ref={mapRef}
+          style={{
+            flex: 1,
+          }}
+          initialRegion={
+            existingLocation
+              ? {
+                  latitude:
+                    existingLocation.latitude,
+
+                  longitude:
+                    existingLocation.longitude,
+
+                  latitudeDelta:
+                    0.012,
+
+                  longitudeDelta:
+                    0.012,
+                }
+              : DEFAULT_REGION
+          }
+          onMapReady={() =>
+            setMapReady(true)
+          }
+          onRegionChangeComplete={
+            handleRegionChangeComplete
+          }
+          showsUserLocation
+          showsMyLocationButton={
+            false
+          }
+          showsCompass={false}
+          toolbarEnabled={false}
+        />
+
+        {/* ==================================================
+            SIMPLE TOP HEADER
+            ================================================== */}
+
+        <View className="absolute left-4 right-4 top-3">
+          <View
+            className="flex-row items-center self-start rounded-[16px] bg-white px-1.5 py-1.5"
             style={{
-              flex: 1,
+              shadowColor:
+                "#000",
+
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+
+              shadowOpacity:
+                0.12,
+
+              shadowRadius:
+                8,
+
+              elevation: 5,
             }}
-            region={region}
-            onRegionChangeComplete={setRegion}
-            onPress={handleMapPress}
-            showsUserLocation
-            showsMyLocationButton
           >
-            {selectedLocation && (
-              <Marker
-                coordinate={{
-                  latitude: selectedLocation.latitude,
-                  longitude: selectedLocation.longitude,
-                }}
-                pinColor={COLORS.pink}
-                title="Incident Location"
-                description="Selected incident location"
+            {/* BACK BUTTON */}
+
+            <Pressable
+              onPress={() =>
+                router.back()
+              }
+              hitSlop={10}
+              className="h-10 w-10 items-center justify-center rounded-[12px] active:bg-[#F5F1F7]"
+            >
+              <Ionicons
+                name="chevron-back"
+                size={22}
+                color={
+                  COLORS.text
+                }
               />
-            )}
-          </MapView>
+            </Pressable>
+
+            {/* TITLE */}
+
+            <Text className="ml-1 mr-4 text-[15px] font-bold text-app-text">
+              Select Location
+            </Text>
+          </View>
         </View>
 
-        {/* Selected location details */}
-        {selectedLocation && (
-          <View className="mt-4 rounded-2xl bg-light-purple p-4">
-            <Text className="font-semibold text-primary">
-              Selected Location
-            </Text>
+        {/* ==================================================
+            FIXED CENTER PIN
+            ================================================== */}
 
-            <Text className="mt-1 text-sm text-app-muted">
-              Latitude:{" "}
-              {selectedLocation.latitude.toFixed(6)}
-            </Text>
+        <View
+          pointerEvents="none"
+          className="absolute inset-0 items-center justify-center"
+        >
+          <View
+            style={{
+              marginTop: -55,
+            }}
+          >
+            <Ionicons
+              name="location"
+              size={48}
+              color={
+                COLORS.pink
+              }
+            />
 
-            <Text className="mt-1 text-sm text-app-muted">
-              Longitude:{" "}
-              {selectedLocation.longitude.toFixed(6)}
-            </Text>
+            {/* PIN SHADOW */}
 
-            <Text className="mt-2 text-xs text-app-muted">
-              Tap another place on the map if you want
-              to change this location.
+            <View className="mt-[-5px] h-[5px] w-[18px] self-center rounded-full bg-black/15" />
+          </View>
+        </View>
+
+        {/* ==================================================
+            CURRENT LOCATION BUTTON
+            ================================================== */}
+
+        <Pressable
+          onPress={() =>
+            getCurrentLocation(true)
+          }
+          disabled={locating}
+          className="absolute right-4 h-12 w-12 items-center justify-center rounded-[16px] bg-white active:opacity-75"
+          style={{
+            bottom:
+              compact
+                ? 178
+                : 190,
+
+            shadowColor:
+              "#000",
+
+            shadowOffset: {
+              width: 0,
+              height: 2,
+            },
+
+            shadowOpacity:
+              0.12,
+
+            shadowRadius:
+              8,
+
+            elevation: 5,
+          }}
+        >
+          {locating ? (
+            <ActivityIndicator
+              size="small"
+              color={
+                COLORS.primary
+              }
+            />
+          ) : (
+            <Ionicons
+              name="locate"
+              size={21}
+              color={
+                COLORS.primary
+              }
+            />
+          )}
+        </Pressable>
+
+        {/* ==================================================
+            MAP LOADING
+            ================================================== */}
+
+        {!mapReady && (
+          <View className="absolute inset-0 items-center justify-center bg-white">
+            <ActivityIndicator
+              size="small"
+              color={
+                COLORS.primary
+              }
+            />
+
+            <Text className="mt-3 text-[11px] text-app-muted">
+              Loading map...
             </Text>
           </View>
         )}
 
-        {/* Confirm button */}
-        <View className="pb-5 pt-4">
-          <PrimaryButton
-            title="Confirm Location"
-            onPress={handleConfirm}
-          />
+        {/* ==================================================
+            BOTTOM PANEL
+            ================================================== */}
+
+        <View
+          className="absolute bottom-0 left-0 right-0 rounded-t-[26px] bg-white px-5 pt-4"
+          style={{
+            paddingBottom:
+              compact
+                ? 10
+                : 14,
+
+            shadowColor:
+              "#000",
+
+            shadowOffset: {
+              width: 0,
+              height: -3,
+            },
+
+            shadowOpacity:
+              0.1,
+
+            shadowRadius:
+              12,
+
+            elevation: 12,
+          }}
+        >
+          {/* HANDLE */}
+
+          <View className="mb-4 h-1 w-10 self-center rounded-full bg-[#DCD6DF]" />
+
+          {/* LOCATION TITLE */}
+
+          <Text className="text-[15px] font-bold text-app-text">
+            Incident location
+          </Text>
+
+          {/* INSTRUCTION */}
+
+          <Text className="mt-1.5 text-[10px] leading-[15px] text-app-muted">
+            Move the map until the pin
+            is exactly where the
+            incident happened.
+          </Text>
+
+          {/* ==================================================
+              USE CURRENT LOCATION
+              ================================================== */}
+
+          <Pressable
+            onPress={() =>
+              getCurrentLocation(true)
+            }
+            disabled={locating}
+            className="mt-3 flex-row items-center self-start py-1 active:opacity-60"
+          >
+            {locating ? (
+              <ActivityIndicator
+                size="small"
+                color={
+                  COLORS.primary
+                }
+              />
+            ) : (
+              <>
+                <Ionicons
+                  name="navigate-outline"
+                  size={16}
+                  color={
+                    COLORS.primary
+                  }
+                />
+
+                <Text className="ml-1.5 text-[10px] font-semibold text-primary">
+                  Use my current location
+                </Text>
+              </>
+            )}
+          </Pressable>
+
+          {/* ==================================================
+              CONFIRM LOCATION
+              ================================================== */}
+
+          <Pressable
+            onPress={
+              handleConfirm
+            }
+            disabled={!mapReady || locating}
+            className="mt-4"
+            style={({
+              pressed,
+            }) => ({
+              borderRadius:
+                16,
+
+              overflow:
+                "hidden",
+
+              opacity:
+                !mapReady || locating
+                  ? 0.6
+                  : pressed
+                  ? 0.86
+                  : 1,
+            })}
+          >
+            <LinearGradient
+              colors={[
+                COLORS.primaryDark,
+                COLORS.primary,
+                COLORS.pink,
+              ]}
+              start={{
+                x: 0,
+                y: 0.5,
+              }}
+              end={{
+                x: 1,
+                y: 0.5,
+              }}
+              style={{
+                height:
+                  compact
+                    ? 49
+                    : 52,
+
+                borderRadius:
+                  16,
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+              }}
+            >
+              <Text className="text-[13px] font-bold text-white">
+                Confirm Location
+              </Text>
+            </LinearGradient>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

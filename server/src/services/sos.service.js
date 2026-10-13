@@ -1,12 +1,20 @@
 import * as sosRepository from "../repositories/sos.repository.js";
 import { validateSOS } from "../validators/sos.validator.js";
+import { sendSOSNotificationsToAllUsers } from "./notification.service.js";
 
 export const activateSOS = async (sosData) => {
   validateSOS(sosData);
 
-  return await sosRepository.createSOS(
-    sosData
-  );
+  const sos = await sosRepository.createSOS(sosData);
+
+  try {
+    await sendSOSNotificationsToAllUsers(sos);
+  } catch (error) {
+    // Notification failure must not undo an emergency SOS.
+    console.error("Failed to send SOS notifications:", error);
+  }
+
+  return sos;
 };
 
 export const getSOSById = async (id) => {
