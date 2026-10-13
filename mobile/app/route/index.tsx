@@ -39,10 +39,24 @@ import { useRouteContext } from "../../src/context/RouteContext";
 
 import * as Location from "expo-location";
 
+import {
+  getPlaceSuggestions,
+  getPlaceDetails,
+  type PlaceSuggestion,
+} from "../../src/services/places.service";
+
+
+const createPlacesSessionToken = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+
 export default function RouteScreen() {
   const { setSelectedRoute } = useRouteContext();
 
   const mapRef = useRef<MapView>(null);
+
+  const placesSessionRef = useRef(
+    createPlacesSessionToken()
+  );
 
   // Destination entered by the user.
   const [destination, setDestination] =
@@ -101,7 +115,18 @@ export default function RouteScreen() {
   const [isResultsExpanded, setIsResultsExpanded] =
     useState(true);
 
-  
+  const [suggestions, setSuggestions] =
+  useState<PlaceSuggestion[]>([]);
+
+  const [showSuggestions, setShowSuggestions] =
+    useState(false);
+
+  const [isSuggestionsLoading, setIsSuggestionsLoading] =
+    useState(false);
+
+  const [isSelectingPlace, setIsSelectingPlace] =
+    useState(false);
+    
 
   /*
    * Automatically get the user's
@@ -158,6 +183,114 @@ export default function RouteScreen() {
     getCurrentLocation();
   }, []);
 
+  
+  useEffect(() => {
+    const searchText = destination.trim();
+
+    if (!showSuggestions || searchText.length < 2) {
+      setSuggestions([]);
+      setIsSuggestionsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let isActive = true;
+
+    setIsSuggestionsLoading(true);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const results = await getPlaceSuggestions(
+          searchText,
+          placesSessionRef.current,
+          currentLocation?.coords.latitude,
+          currentLocation?.coords.longitude,
+          controller.signal
+        );
+
+        if (isActive) {
+          setSuggestions(results);
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error("Autocomplete error:", error);
+          setSuggestions([]);
+        }
+      } finally {
+        if (isActive) {
+          setIsSuggestionsLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    destination,
+    showSuggestions,
+    currentLocation?.coords.latitude,
+    currentLocation?.coords.longitude,
+  ]);
+
+
+  
+  const handleSelectSuggestion = async (
+    suggestion: PlaceSuggestion
+  ) => {
+    setShowSuggestions(false);
+    setSuggestions([]);
+    Keyboard.dismiss();
+
+    setIsSelectingPlace(true);
+
+    try {
+      const place = await getPlaceDetails(
+        suggestion.placeId,
+        placesSessionRef.current
+      );
+
+      const coordinates = {
+        latitude: place.latitude,
+        longitude: place.longitude,
+      };
+
+      // Display the selected place.
+      setDestination(
+        suggestion.description || suggestion.title
+      );
+
+      // Store exact coordinates for route search.
+      setSelectedDestination(coordinates);
+
+      setErrorMessage("");
+
+      // Move map to selected destination.
+      mapRef.current?.animateToRegion(
+        {
+          ...coordinates,
+          latitudeDelta: 0.03,
+          longitudeDelta: 0.03,
+        },
+        500
+      );
+    } catch (error) {
+      console.error("Place selection error:", error);
+
+      setErrorMessage(
+        "Unable to select this destination. Please try again."
+      );
+    } finally {
+      placesSessionRef.current =
+        createPlacesSessionToken();
+
+      setIsSelectingPlace(false);
+    }
+  };
+
+
   /*
    * Search routes using:
    *
@@ -167,6 +300,8 @@ export default function RouteScreen() {
    */
   const handleSearchRoutes = async () => {
     Keyboard.dismiss();
+    setShowSuggestions(false);
+    setSuggestions([]);
 
     const destinationValue =
       destination.trim();
@@ -467,10 +602,17 @@ export default function RouteScreen() {
           />
         </View>
 
+        
         {/* Floating Destination Search */}
-        <View className="absolute left-0 right-0 top-20 z-10 px-5">
+        <View
+          className="absolute left-0 right-0 top-20 px-5"
+          style={{
+            zIndex: 100,
+            elevation: 20,
+          }}
+        >
+          {/* Destination Input + Search Button */}
           <View className="flex-row items-center">
-
             <TextInput
               className="flex-1 rounded-full border border-app-border bg-white px-5 py-3 text-base text-app-text"
               placeholder="Enter destination"
@@ -479,22 +621,175 @@ export default function RouteScreen() {
               onChangeText={(text) => {
                 setDestination(text);
                 setSelectedDestination(null);
+                setShowSuggestions(text.trim().length >= 2);
+              }}
+              onFocus={() => {
+                if (destination.trim().length >= 2) {
+                  setShowSuggestions(true);
+                }
               }}
               autoCapitalize="words"
               returnKeyType="search"
-              onSubmitEditing={handleSearchRoutes}
+              onSubmitEditing={() => {
+                if (!isSelectingPlace) {
+                  handleSearchRoutes();
+                }
+              }}
             />
 
             <Pressable
               onPress={handleSearchRoutes}
-              disabled={isLoading || isGettingLocation}
+              disabled={
+                isLoading ||
+                isGettingLocation ||
+                isSelectingPlace
+              }
               className="ml-2 h-11 w-11 items-center justify-center rounded-full bg-primary"
             >
-              <Text className="text-lg text-white">🔍</Text>
+              <Text className="text-lg text-white">
+                🔍
+              </Text>
             </Pressable>
-
           </View>
+
+          {/* Google Places Suggestions */}
+          {showSuggestions && (
+            <View
+              style={{
+                marginTop: 8,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "#EAE6EE",
+                overflow: "hidden",
+                shadowColor: "#000000",
+                shadowOpacity: 0.13,
+                shadowRadius: 12,
+                elevation: 12,
+              }}
+            >
+              {isSuggestionsLoading ? (
+                <View
+                  style={{
+                    padding: 20,
+                    alignItems: "center",
+                  }}
+                >
+                  <ActivityIndicator color="#7C3AED" />
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      color: "#6B6470",
+                      fontSize: 13,
+                    }}
+                  >
+                    Searching destinations...
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={{ maxHeight: 270 }}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {suggestions.map((item, index) => {
+                    const isCity =
+                      item.types.includes("locality") ||
+                      item.types.includes("administrative_area_level_2");
+
+                    return (
+                      <Pressable
+                        key={item.placeId}
+                        onPress={() =>
+                          handleSelectSuggestion(item)
+                        }
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingHorizontal: 15,
+                          paddingVertical: 13,
+                          borderBottomWidth:
+                            index === suggestions.length - 1
+                              ? 0
+                              : 1,
+                          borderBottomColor: "#F0EDF2",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 21,
+                            marginRight: 12,
+                          }}
+                        >
+                          {isCity ? "🏙️" : "📍"}
+                        </Text>
+
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              fontSize: 15,
+                              fontWeight: "600",
+                              color: "#211B2B",
+                            }}
+                          >
+                            {item.title}
+                          </Text>
+
+                          {!!item.subtitle && (
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                fontSize: 12,
+                                color: "#837C89",
+                                marginTop: 3,
+                              }}
+                            >
+                              {item.subtitle}
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+
+                  {suggestions.length === 0 && (
+                    <Text
+                      style={{
+                        padding: 16,
+                        fontSize: 13,
+                        color: "#837C89",
+                        textAlign: "center",
+                      }}
+                    >
+                      No matching destinations found
+                    </Text>
+                  )}
+                </ScrollView>
+              )}
+
+              <View
+                style={{
+                  paddingHorizontal: 15,
+                  paddingVertical: 8,
+                  alignItems: "flex-end",
+                  borderTopWidth: 1,
+                  borderTopColor: "#F0EDF2",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: "#77717F",
+                  }}
+                >
+                  Powered by Google Maps
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
+
         
         {/* =====================================
             MAP
@@ -508,6 +803,8 @@ export default function RouteScreen() {
               height: "100%",
             }}
             onPress={async (event) => {
+              setShowSuggestions(false);
+              setSuggestions([]);
               Keyboard.dismiss();
 
               const {
