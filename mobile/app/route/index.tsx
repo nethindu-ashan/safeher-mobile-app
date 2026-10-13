@@ -557,10 +557,11 @@ export default function RouteScreen() {
                 );
               }
             }}
-            showsUserLocation={
-              !!currentLocation
-            }
+
+            showsUserLocation={true}
             showsMyLocationButton={true}
+            followsUserLocation={false}
+            
             initialRegion={{
               latitude:
                 currentLocation?.coords
@@ -574,21 +575,7 @@ export default function RouteScreen() {
               longitudeDelta: 0.15,
             }}
           >
-            {currentLocation && (
-              <Marker
-                coordinate={{
-                  latitude:
-                    currentLocation.coords
-                      .latitude,
-
-                  longitude:
-                    currentLocation.coords
-                      .longitude,
-                }}
-                title="Current Location"
-              />
-            )}
-
+            
             {selectedDestination && (
               <Marker
                 coordinate={selectedDestination}

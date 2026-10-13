@@ -160,6 +160,11 @@ export default function RouteOptionsScreen() {
                   latitudeDelta: 0.08,
                   longitudeDelta: 0.08,
                 }}
+
+                showsUserLocation={true}
+                showsMyLocationButton={true}
+                followsUserLocation={false}
+
                 onMapReady={() => {
                   mapRef.current?.fitToCoordinates(routeCoordinates, {
                     edgePadding: {
@@ -173,12 +178,7 @@ export default function RouteOptionsScreen() {
                 }}
               >
               
-              {/* Starting location */}
-              <Marker
-                coordinate={startCoordinate}
-                title="Starting Location"
-                description={selectedRoute.startLocation}
-              />
+              
 
               {/* Destination */}
               <Marker
