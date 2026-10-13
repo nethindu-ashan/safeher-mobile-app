@@ -34,6 +34,8 @@ import {
   RouteSafetyIncident,
 } from "../../src/services/routeSafety.service";
 
+import { Ionicons } from "@expo/vector-icons";
+
 type Coordinates = {
   latitude: number;
   longitude: number;
@@ -88,6 +90,8 @@ export default function NavigationScreen() {
   const { selectedRoute } = useRouteContext();
 
   const mapRef = useRef<MapView>(null);
+
+  const navigationHeadingRef = useRef(0);
 
   const locationSubscription =
     useRef<Location.LocationSubscription | null>(null);
@@ -217,17 +221,29 @@ export default function NavigationScreen() {
               coordinates
             );
 
-            // Center map on user's location.
-            mapRef.current?.animateToRegion(
+            // Read the initial GPS travel direction.
+            const initialHeading = location.coords.heading;
+
+            if (
+              typeof initialHeading === "number" &&
+              Number.isFinite(initialHeading) &&
+              initialHeading >= 0
+            ) {
+              navigationHeadingRef.current = initialHeading;
+            }
+
+            // Set up the navigation camera.
+            // onMapReady will also position it when the map first mounts.
+            mapRef.current?.animateCamera(
               {
-                latitude:
-                  coordinates.latitude,
-                longitude:
-                  coordinates.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
+                center: coordinates,
+                heading: navigationHeadingRef.current,
+                pitch: 45,
+                zoom: 17,
               },
-              500
+              {
+                duration: 800,
+              }
             );
           }
 
@@ -235,12 +251,13 @@ export default function NavigationScreen() {
           locationSubscription.current =
             await Location.watchPositionAsync(
               {
-                accuracy:
-                  Location.Accuracy.High,
+                accuracy: Location.Accuracy.High,
 
-                timeInterval: 3000,
+                // Request faster updates on Android.
+                timeInterval: 1000,
 
-                distanceInterval: 5,
+                // Request updates after about 2 metres of movement.
+                distanceInterval: 2,
               },
 
               (updatedLocation) => {
@@ -306,19 +323,32 @@ export default function NavigationScreen() {
 
 
                 // Keep map centered on current location.
-                mapRef.current?.animateToRegion(
+                // Get the user's actual travel direction.
+                const gpsHeading = updatedLocation.coords.heading;
+                const speed = updatedLocation.coords.speed;
+
+                // Update direction when the device is moving
+                // and GPS provides a valid heading.
+                if (
+                  typeof gpsHeading === "number" &&
+                  Number.isFinite(gpsHeading) &&
+                  gpsHeading >= 0 &&
+                  (speed ?? 0) > 0.5
+                ) {
+                  navigationHeadingRef.current = gpsHeading;
+                }
+
+                // Smoothly follow the live GPS location.
+                mapRef.current?.animateCamera(
                   {
-                    latitude:
-                      coordinates.latitude,
-
-                    longitude:
-                      coordinates.longitude,
-
-                    latitudeDelta: 0.01,
-
-                    longitudeDelta: 0.01,
+                    center: coordinates,
+                    heading: navigationHeadingRef.current,
+                    pitch: 45,
+                    zoom: 17,
                   },
-                  500
+                  {
+                    duration: 1200,
+                  }
                 );
               }
             );
@@ -456,7 +486,24 @@ export default function NavigationScreen() {
             longitudeDelta: 0.01,
           }}
           showsUserLocation={false}
-          showsMyLocationButton={false}
+          showsMyLocationButton={true}
+          followsUserLocation={false}
+
+          onMapReady={() => {
+            if (currentLocation) {
+              mapRef.current?.animateCamera(
+                {
+                  center: currentLocation,
+                  heading: navigationHeadingRef.current,
+                  pitch: 45,
+                  zoom: 17,
+                },
+                {
+                  duration: 800,
+                }
+              );
+            }
+          }}
         >
 
           {/* Selected route */}
@@ -472,16 +519,6 @@ export default function NavigationScreen() {
             />
           )}
 
-          {/* Current device location */}
-          {currentLocation && (
-            <Marker
-              coordinate={
-                currentLocation
-              }
-              title="Your Location"
-              description="Current location"
-            />
-          )}
 
           {/* Destination */}
           {routeCoordinates.length > 0 && (
@@ -524,11 +561,54 @@ export default function NavigationScreen() {
         </MapView>
 
         {/* =====================================
-            FLOATING HEADER
+            LIVE NAVIGATION ARROW
         ====================================== */}
-        <View className="absolute left-0 right-0 top-0 px-5">
-          <ScreenHeader title="Navigation" />
-        </View>
+
+        {currentLocation && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+
+              // Keep the arrow at the center of the map.
+              left: "50%",
+              top: "50%",
+
+              transform: [
+                { translateX: -23 },
+                { translateY: -23 },
+              ],
+
+              width: 46,
+              height: 46,
+
+              borderRadius: 23,
+
+              backgroundColor: "rgba(255,255,255,0.92)",
+
+              borderWidth: 2,
+              borderColor: "#FFFFFF",
+
+              alignItems: "center",
+              justifyContent: "center",
+
+              shadowColor: "#000",
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+
+              elevation: 5,
+            }}
+          >
+            <Ionicons
+              name="navigate"
+              size={30}
+              color="#2563EB"
+              style={{
+                transform: [{ rotate: "-45deg" }],
+              }}
+            />
+          </View>
+        )}
 
 
         {/* =====================================
