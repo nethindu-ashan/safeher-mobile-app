@@ -44,6 +44,8 @@ export default function RouteScreen() {
 
   const mapRef = useRef<MapView>(null);
 
+  const isSearchingRef = useRef(false);
+
   // Destination entered by the user.
   const [destination, setDestination] =
     useState("");
@@ -108,55 +110,85 @@ export default function RouteScreen() {
    * current location when the screen opens.
    */
   useEffect(() => {
-    const getCurrentLocation =
-      async () => {
-        try {
-          setIsGettingLocation(true);
-          setErrorMessage("");
+  let isMounted = true;
 
-          /*
-           * Request location permission.
-           */
-          const { status } =
-            await Location.requestForegroundPermissionsAsync();
+  const getCurrentLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      setErrorMessage("");
 
-          if (status !== "granted") {
-            setErrorMessage(
-              "Location permission is required to find your current location."
-            );
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
 
-            setIsGettingLocation(false);
-            return;
-          }
-
-          /*
-           * Get current GPS location.
-           */
-          const location =
-            await Location.getCurrentPositionAsync(
-              {
-                accuracy:
-                  Location.Accuracy.High,
-              }
-            );
-
-          setCurrentLocation(location);
-        } catch (error) {
-          console.error(
-            "Current location error:",
-            error
-          );
-
+      if (status !== "granted") {
+        if (isMounted) {
           setErrorMessage(
-            "Unable to get your current location."
+            "Location permission was denied. Enable location access in your device settings to find safe routes."
           );
-        } finally {
-          setIsGettingLocation(false);
         }
-      };
+        return;
+      }
 
-    getCurrentLocation();
-  }, []);
+      const servicesEnabled =
+        await Location.hasServicesEnabledAsync();
+
+      if (!servicesEnabled) {
+        if (isMounted) {
+          setErrorMessage(
+            "Location Services are disabled. Enable GPS/location services and try again."
+          );
+        }
+        return;
+      }
+
+      const location =
+        await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+      const { latitude, longitude } = location.coords;
+
+      const validCoordinates =
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
+
+      if (!validCoordinates) {
+        if (isMounted) {
+          setErrorMessage(
+            "Your device returned an invalid location. Check your GPS settings and try again."
+          );
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setCurrentLocation(location);
+      }
+    } catch (error) {
+      console.error("Current location error:", error);
+
+      if (isMounted) {
+        setErrorMessage(
+          "Unable to determine your current location. Check your GPS settings and try again."
+        );
+      }
+    } finally {
+      if (isMounted) {
+        setIsGettingLocation(false);
+      }
+    }
+  };
+
+  void getCurrentLocation();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   /*
    * Search routes using:
@@ -167,6 +199,10 @@ export default function RouteScreen() {
    */
   const handleSearchRoutes = async () => {
     Keyboard.dismiss();
+
+    if (isSearchingRef.current || isLoading) {
+      return;
+    }
 
     const destinationValue =
       destination.trim();
@@ -182,7 +218,43 @@ export default function RouteScreen() {
       return;
     }
 
-    let destinationCoordinates = selectedDestination;
+    if (destinationValue.length < 2) {
+       setErrorMessage(
+         "Please enter a more specific destination."
+      );
+     return;
+    }
+
+    // Validate the starting location before geocoding.
+  if (!currentLocation) {
+    setErrorMessage(
+      "Your current location is unavailable. Check location permission and GPS settings, then try again."
+    );
+    return;
+  }
+
+  const { latitude, longitude } = currentLocation.coords;
+
+  const validStartCoordinates =
+  Number.isFinite(latitude) &&
+  Number.isFinite(longitude) &&
+  latitude >= -90 &&
+  latitude <= 90 &&
+  longitude >= -180 &&
+  longitude <= 180;
+
+  if (!validStartCoordinates) {
+  setErrorMessage(
+    "Your starting location is invalid. Please refresh your current location and try again."
+  );
+  return;
+ }
+
+   
+    isSearchingRef.current = true;
+setIsLoading(true);
+
+let destinationCoordinates = selectedDestination;
 
     if (!destinationCoordinates) {
       try {
@@ -207,46 +279,55 @@ export default function RouteScreen() {
             },
             500
           );
-
         }
       } catch (error) {
-        console.error(
-          "Destination geocoding error:",
-          error
-        );
+        console.error("Destination geocoding error:", error);
       }
     }
 
     /*
-     * Current location must be available.
+     * Lock the search and clear previous data.
      */
-    if (!currentLocation) {
-      setErrorMessage(
-        "Your current location is not available yet. Please wait a moment and try again."
-      );
 
-      return;
-    }
-
-    /*
-     * Clear previous data.
-     */
     setErrorMessage("");
-    setRoutes([]);
-    setRouteComparisons([]);
-    setRouteIncidentCounts({});
-    setComparisonError("");
-    setRecommendedRouteId(null);
+   setRoutes([]);
+   setRouteComparisons([]);
+   setRouteIncidentCounts({});
+   setComparisonError("");
+   setRecommendedRouteId(null);
 
-    /*
-     * Open results sheet when
-     * new search starts.
-     */
-    setIsResultsExpanded(true);
+/*
+ * Open results sheet when new search starts.
+ */
+   setIsResultsExpanded(true);
+
+   // Validate destination coordinates before calling the backend.
+if (destinationCoordinates) {
+  const {
+    latitude,
+    longitude,
+  } = destinationCoordinates;
+
+  const validDestinationCoordinates =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  if (!validDestinationCoordinates) {
+    setErrorMessage(
+      "The selected destination has invalid coordinates. Please select it again."
+    );
+
+    setIsLoading(false);
+    isSearchingRef.current = false;
+    return;
+  }
+}
 
     try {
-      setIsLoading(true);
-
       /*
        * Send current GPS coordinates
        * and destination to backend.
@@ -412,6 +493,7 @@ export default function RouteScreen() {
       );
     } finally {
       setIsLoading(false);
+      isSearchingRef.current = false;
     }
   };
 
@@ -487,7 +569,7 @@ export default function RouteScreen() {
 
             <Pressable
               onPress={handleSearchRoutes}
-              disabled={isLoading || isGettingLocation}
+              disabled={isLoading || isGettingLocation || isSearchingRef.current}
               className="ml-2 h-11 w-11 items-center justify-center rounded-full bg-primary"
             >
               <Text className="text-lg text-white">🔍</Text>
