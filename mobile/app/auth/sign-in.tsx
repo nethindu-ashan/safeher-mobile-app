@@ -176,41 +176,36 @@ export default function SignInScreen() {
      ========================================================== */
 
   const validateForm = () => {
-    const cleanEmail =
-      email.trim().toLowerCase();
+  const cleanEmail = email.trim().toLowerCase();
 
-    if (!cleanEmail) {
-      Alert.alert(
-        "Missing email",
-        "Please enter your email address."
-      );
+  if (!cleanEmail) {
+    Alert.alert(
+      "Missing email",
+      "Please enter your email address."
+    );
+    return false;
+  }
 
-      return false;
-    }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    const emailRegex =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    Alert.alert(
+      "Invalid email",
+      "Please enter a valid email address."
+    );
+    return false;
+  }
 
-    if (!emailRegex.test(cleanEmail)) {
-      Alert.alert(
-        "Invalid email",
-        "Please enter a valid email address."
-      );
+  if (password.length === 0) {
+    Alert.alert(
+      "Missing password",
+      "Please enter your password."
+    );
+    return false;
+  }
 
-      return false;
-    }
-
-    if (!password) {
-      Alert.alert(
-        "Missing password",
-        "Please enter your password."
-      );
-
-      return false;
-    }
-
-    return true;
-  };
+  return true;
+};
 
   /* ==========================================================
      SIGN IN

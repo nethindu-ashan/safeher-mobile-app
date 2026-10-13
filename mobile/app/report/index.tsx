@@ -4,6 +4,7 @@ import { router } from "expo-router";
 
 import {
   ComponentProps,
+   useRef,
   useState,
 } from "react";
 
@@ -124,6 +125,8 @@ export default function ReportIncidentScreen() {
     setDescriptionFocused,
   ] = useState(false);
 
+  const isPickingEvidence = useRef(false);
+
   /* ==========================================================
      VALUES
      ========================================================== */
@@ -153,41 +156,42 @@ export default function ReportIncidentScreen() {
      ADD PHOTOS
      ========================================================== */
 
-  const handleAddEvidence =
-    async () => {
-      if (
-        evidenceLimitReached
-      ) {
-        return;
-      }
+  const handleAddEvidence = async () => {
+  if (evidenceLimitReached || isPickingEvidence.current) {
+    return;
+  }
 
-      try {
-        const selected =
-          await pickIncidentEvidence(
-            evidenceCount
-          );
+  isPickingEvidence.current = true;
 
-        if (
-          selected.length === 0
-        ) {
-          return;
-        }
+  try {
+    const selected = await pickIncidentEvidence(evidenceCount);
 
-        updateDraft({
-          evidence: [
-            ...draft.evidence,
-            ...selected,
-          ],
-        });
-      } catch (error) {
-        Alert.alert(
-          "Unable to add photos",
-          error instanceof Error
-            ? error.message
-            : "Please try again."
-        );
-      }
-    };
+    if (selected.length === 0) {
+      return;
+    }
+
+    // Never exceed the three-photo limit.
+    const remainingSlots = Math.max(0, 3 - evidenceCount);
+    const evidenceToAdd = selected.slice(0, remainingSlots);
+
+    if (evidenceToAdd.length === 0) {
+      return;
+    }
+
+    updateDraft({
+      evidence: [...draft.evidence, ...evidenceToAdd],
+    });
+  } catch (error) {
+    Alert.alert(
+      "Unable to add photos",
+      error instanceof Error
+        ? error.message
+        : "Please try again."
+    );
+  } finally {
+    isPickingEvidence.current = false;
+  }
+};
 
   /* ==========================================================
      REMOVE PHOTO
@@ -209,43 +213,59 @@ export default function ReportIncidentScreen() {
      CONTINUE
      ========================================================== */
 
-  const handleContinue =
-    () => {
-      if (
-        !draft.category ||
-        !draft.description.trim()
-      ) {
-        setShowErrors(true);
-        return;
-      }
+  const handleContinue = () => {
+  const cleanDescription = draft.description.trim();
 
-      setShowErrors(false);
+  // Validate incident type.
+  if (!draft.category) {
+    setShowErrors(true);
+    return;
+  }
 
-      /*
-       * If location is already selected,
-       * user does NOT need to select it again.
-       *
-       * This happens especially when the
-       * user comes back from Review to edit.
-       */
+  // Validate description.
+  if (!cleanDescription) {
+    setShowErrors(true);
+    return;
+  }
 
-      if (hasLocation) {
-        router.push(
-          "/report/review"
-        );
+  setShowErrors(false);
 
-        return;
-      }
+  // If coordinates exist, make sure they are valid.
+  if (hasLocation) {
+    const { latitude, longitude } = draft;
 
-      /*
-       * First time reporting:
-       * location has not been selected yet.
-       */
+    const validCoordinates =
+      typeof latitude === "number" &&
+      typeof longitude === "number" &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
 
-      router.push(
-        "/report/select-location"
+    if (!validCoordinates) {
+      Alert.alert(
+        "Invalid location",
+        "Please select a valid location before reviewing your report.",
+        [
+          {
+            text: "Select location",
+            onPress: () => router.push("/report/select-location"),
+          },
+        ]
       );
-    };
+
+      return;
+    }
+
+    router.push("/report/review");
+    return;
+  }
+
+  // Location has not been selected yet.
+  router.push("/report/select-location");
+};
 
   /* ==========================================================
      UI

@@ -133,88 +133,83 @@ export default function VerifyEmailScreen() {
      VERIFY EMAIL
      ========================================================== */
 
-  const handleVerify =
-    async () => {
-      if (!email) {
-        Alert.alert(
-          "Missing email",
-          "We could not find the email address for this verification."
-        );
+  const handleVerify = async () => {
+  if (loading) return;
 
-        return;
-      }
+  const cleanEmail =
+    typeof email === "string"
+      ? email.trim().toLowerCase()
+      : "";
 
-      const cleanOtp =
-        otp.trim();
+  if (!cleanEmail) {
+    Alert.alert(
+      "Missing email",
+      "We could not find the email address for this verification."
+    );
+    return;
+  }
 
-      if (!cleanOtp) {
-        Alert.alert(
-          "Missing code",
-          "Please enter the verification code sent to your email."
-        );
+  const cleanOtp = otp.trim();
 
-        return;
-      }
+  if (!cleanOtp) {
+    Alert.alert(
+      "Missing code",
+      "Please enter the verification code sent to your email."
+    );
+    return;
+  }
 
-      if (
-        cleanOtp.length !==
-        8
-      ) {
-        Alert.alert(
-          "Invalid code",
-          "Please enter the complete 8-digit verification code."
-        );
+  // OTP must contain exactly 8 digits.
+  if (!/^\d{8}$/.test(cleanOtp)) {
+    Alert.alert(
+      "Invalid code",
+      "Please enter a valid 8-digit numeric verification code."
+    );
+    return;
+  }
 
-        return;
-      }
+  try {
+    setLoading(true);
 
-      try {
-        setLoading(true);
+    const data = await verifyEmailOtp(
+      cleanEmail,
+      cleanOtp
+    );
 
-        const data =
-          await verifyEmailOtp(
-            email,
-            cleanOtp
-          );
+    if (!data.user) {
+      throw new Error(
+        "Unable to verify your SafeHer account."
+      );
+    }
 
-        if (!data.user) {
-          throw new Error(
-            "Unable to verify your SafeHer account."
-          );
-        }
+    if (data.session) {
+      await getMyProfile();
+    }
 
-        if (data.session) {
-          await getMyProfile();
-        }
+    Alert.alert(
+      "Account verified",
+      "Your SafeHer account has been verified successfully.",
+      [
+        {
+          text: "Continue",
+          onPress: () => router.replace("/"),
+        },
+      ]
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to verify the code.";
 
-        Alert.alert(
-          "Account verified",
-          "Your SafeHer account has been verified successfully.",
-          [
-            {
-              text: "Continue",
-
-              onPress: () =>
-                router.replace(
-                  "/"
-                ),
-            },
-          ]
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to verify the code.";
-
-        Alert.alert(
-          "Verification failed",
-          message
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+    Alert.alert(
+      "Verification failed",
+      message
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* ==========================================================
      RESEND OTP
@@ -222,6 +217,9 @@ export default function VerifyEmailScreen() {
 
   const handleResend =
     async () => {
+
+      if (resending) return;
+      
       if (!email) {
         Alert.alert(
           "Missing email",
@@ -707,14 +705,14 @@ export default function VerifyEmailScreen() {
                   }
                   onChangeText={(
                     value
-                  ) =>
+                  ) => {
                     setOtp(
                       value.replace(
-                        /[^0-9]/g,
+                        /\D/g,
                         ""
-                      )
-                    )
-                  }
+                      ).slice(0, 8)
+                    );
+                  }}
                   placeholder="00000000"
                   placeholderTextColor="#C0B9C3"
                   keyboardType="number-pad"

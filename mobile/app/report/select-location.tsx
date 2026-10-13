@@ -117,6 +117,9 @@ export default function SelectLocationScreen() {
     setMapReady,
   ] = useState(false);
 
+  const isLocatingRef = useRef(false);
+const isConfirmingRef = useRef(false);
+
   /* ==========================================================
      MOVE MAP TO LOCATION
      ========================================================== */
@@ -147,57 +150,82 @@ export default function SelectLocationScreen() {
      CURRENT LOCATION
      ========================================================== */
 
-  const getCurrentLocation =
-    async (
-      showAlert = true
-    ) => {
-      try {
-        setLocating(true);
+  const getCurrentLocation = async (showAlert = true) => {
+  if (isLocatingRef.current) return;
 
-        const {
-          status,
-        } =
-          await Location.requestForegroundPermissionsAsync();
+  isLocatingRef.current = true;
+  setLocating(true);
 
-        if (
-          status !== "granted"
-        ) {
-          if (showAlert) {
-            Alert.alert(
-              "Location Permission",
-              "Location access was not granted. You can still move the map manually to select where the incident happened."
-            );
-          }
+  try {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
 
-          return;
-        }
-
-        const location =
-          await Location.getCurrentPositionAsync({
-            accuracy:
-              Location.Accuracy.High,
-          });
-
-        moveMapToLocation(
-          location.coords.latitude,
-          location.coords.longitude
+    if (status !== "granted") {
+      if (showAlert) {
+        Alert.alert(
+          "Location Permission Required",
+          "Location access was not granted. You can still move the map manually to select where the incident happened."
         );
-      } catch (error) {
-        console.error(
-          "Unable to get current location:",
-          error
-        );
-
-        if (showAlert) {
-          Alert.alert(
-            "Location Error",
-            "Unable to get your current location. Please move the map manually."
-          );
-        }
-      } finally {
-        setLocating(false);
       }
-    };
+
+      return;
+    }
+
+    const servicesEnabled =
+      await Location.hasServicesEnabledAsync();
+
+    if (!servicesEnabled) {
+      if (showAlert) {
+        Alert.alert(
+          "GPS Unavailable",
+          "Please enable Location Services on your device, or move the map manually to select the incident location."
+        );
+      }
+
+      return;
+    }
+
+    const location =
+      await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+    const { latitude, longitude } = location.coords;
+
+    const validCoordinates =
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
+
+    if (!validCoordinates) {
+      if (showAlert) {
+        Alert.alert(
+          "Invalid Location",
+          "Your device returned invalid coordinates. Please try again or select the location manually."
+        );
+      }
+
+      return;
+    }
+
+    moveMapToLocation(latitude, longitude);
+  } catch (error) {
+    console.error("Unable to get current location:", error);
+
+    if (showAlert) {
+      Alert.alert(
+        "Location Unavailable",
+        "Unable to determine your current location. Check your GPS settings or move the map manually."
+      );
+    }
+  } finally {
+    isLocatingRef.current = false;
+    setLocating(false);
+  }
+};
 
   /* ==========================================================
      INITIAL LOCATION
@@ -250,35 +278,61 @@ export default function SelectLocationScreen() {
      CONFIRM LOCATION
      ========================================================== */
 
-  const handleConfirm =
-    () => {
-      /*
-       * Save selected location
-       * into IncidentReportContext.
-       */
+  const handleConfirm = () => {
+  if (isConfirmingRef.current) return;
 
-      updateDraft({
-        latitude:
-          selectedLocation.latitude,
+  if (!mapReady) {
+    Alert.alert(
+      "Map Not Ready",
+      "Please wait for the map to finish loading before confirming the location."
+    );
+    return;
+  }
 
-        longitude:
-          selectedLocation.longitude,
-      });
+  if (locating || isLocatingRef.current) {
+    Alert.alert(
+      "Finding Location",
+      "Please wait until your current location has been determined, or select a location manually."
+    );
+    return;
+  }
 
-      /*
-       * IMPORTANT:
-       *
-       * Do NOT use router.back() here.
-       *
-       * The user has completed the
-       * location step, so continue
-       * directly to Review.
-       */
+  const { latitude, longitude } = selectedLocation;
 
-      router.replace(
-        "/report/review"
-      );
-    };
+  const validCoordinates =
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
+
+  if (!validCoordinates) {
+    Alert.alert(
+      "Invalid Location",
+      "Please select a valid location on the map before continuing."
+    );
+    return;
+  }
+
+  isConfirmingRef.current = true;
+
+  try {
+    updateDraft({
+      latitude,
+      longitude,
+    });
+
+    router.replace("/report/review");
+  } catch (error) {
+    isConfirmingRef.current = false;
+
+    Alert.alert(
+      "Unable to Save Location",
+      "We couldn't save the selected location. Please try again."
+    );
+  }
+};
 
   /* ==========================================================
      UI
@@ -576,6 +630,7 @@ export default function SelectLocationScreen() {
             onPress={
               handleConfirm
             }
+            disabled={!mapReady || locating}
             className="mt-4"
             style={({
               pressed,
@@ -587,7 +642,9 @@ export default function SelectLocationScreen() {
                 "hidden",
 
               opacity:
-                pressed
+                !mapReady || locating
+                  ? 0.6
+                  : pressed
                   ? 0.86
                   : 1,
             })}
