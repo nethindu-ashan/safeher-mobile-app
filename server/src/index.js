@@ -13,6 +13,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import pushTokenRoutes from "./routes/pushToken.routes.js";
 import trustedContactRoutes from "./routes/trustedContact.routes.js";
 import adminSosRoutes from "./routes/adminSos.routes.js";
+import placesRoutes from "./routes/places.routes.js";
 
 const app = express();
 
@@ -45,6 +46,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/admin/sos", adminSosRoutes);
 
 app.use("/api/admin", adminRoutes);
+
+app.use("/api/places", placesRoutes);
 
 app.use("/api/trusted-contacts", trustedContactRoutes);
 
