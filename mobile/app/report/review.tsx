@@ -18,7 +18,7 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 import ScreenHeader from "../../src/components/ScreenHeader";
 
@@ -65,99 +65,163 @@ export default function ReviewIncidentScreen() {
     setSubmitting,
   ] = useState(false);
 
+  const submissionLock = useRef(false);
+
   /* ==========================================================
      SUBMIT REPORT
      ========================================================== */
 
-  const handleSubmit =
-    async () => {
-      if (
-        draft.latitude === null ||
-        draft.longitude === null
-      ) {
-        Alert.alert(
-          "Location Required",
-          "Please select an incident location."
-        );
+  const handleSubmit = async () => {
+  // Prevent rapid duplicate submissions.
+  if (submissionLock.current || submitting) {
+    return;
+  }
 
-        router.push(
-          "/report/select-location"
-        );
+  // Validate incident type.
+  const validCategories = [
+    "Harassment",
+    "Suspicious Activity",
+    "Unsafe Area",
+    "Other",
+  ];
 
-        return;
-      }
+  if (!validCategories.includes(draft.category)) {
+    Alert.alert(
+      "Incident Type Required",
+      "Please select a valid incident type.",
+      [
+        {
+          text: "Edit Report",
+          onPress: () => router.replace("/report"),
+        },
+      ]
+    );
+    return;
+  }
 
-      try {
-        setSubmitting(true);
+  // Validate description.
+  const cleanDescription = draft.description.trim();
 
-        const evidencePaths =
-          draft.evidence.length > 0
-            ? await uploadIncidentEvidence(
-                draft.evidence
-              )
-            : [];
+  if (!cleanDescription) {
+    Alert.alert(
+      "Description Required",
+      "Please describe what happened before submitting.",
+      [
+        {
+          text: "Edit Report",
+          onPress: () => router.replace("/report"),
+        },
+      ]
+    );
+    return;
+  }
 
-        console.log(
-          "MOBILE EVIDENCE PATHS:",
-          evidencePaths
-        );
+  if (cleanDescription.length > 500) {
+    Alert.alert(
+      "Description Too Long",
+      "Your description cannot exceed 500 characters."
+    );
+    return;
+  }
 
-        const response =
-          await createIncident({
-            category:
-              draft.category,
+  // Validate incident coordinates.
+  const { latitude, longitude } = draft;
 
-            latitude:
-              draft.latitude,
+  const validLocation =
+    typeof latitude === "number" &&
+    typeof longitude === "number" &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180;
 
-            longitude:
-              draft.longitude,
+  if (!validLocation) {
+    Alert.alert(
+      "Valid Location Required",
+      "Please select a valid location for your incident.",
+      [
+        {
+          text: "Select Location",
+          onPress: () =>
+            router.push("/report/select-location"),
+        },
+      ]
+    );
+    return;
+  }
 
-            dateTime:
-              draft.dateTime,
+  // Evidence is optional, but enforce its constraints.
+  if (draft.evidence.length > 3) {
+    Alert.alert(
+      "Too Many Photos",
+      "You can attach a maximum of 3 photos to a report."
+    );
+    return;
+  }
 
-            description:
-              draft.description,
+  const invalidEvidence = draft.evidence.some(
+    (item) =>
+      typeof item.uri !== "string" ||
+      item.uri.trim().length === 0
+  );
 
-            isAnonymous:
-              draft.isAnonymous,
+  if (invalidEvidence) {
+    Alert.alert(
+      "Invalid Evidence",
+      "One or more selected photos are invalid. Please edit your report and select them again."
+    );
+    return;
+  }
 
-            evidencePaths,
-          });
+  submissionLock.current = true;
 
-        console.log(
-          "INCIDENT CREATE RESPONSE:",
-          response
-        );
+  try {
+    setSubmitting(true);
 
-        router.replace({
-          pathname:
-            "/report/success",
+    const evidencePaths =
+      draft.evidence.length > 0
+        ? await uploadIncidentEvidence(draft.evidence)
+        : [];
 
-          params: {
-            id:
-              response.data.id,
+    const response = await createIncident({
+      category: draft.category,
+      latitude,
+      longitude,
+      dateTime: draft.dateTime,
+      description: cleanDescription,
+      isAnonymous: draft.isAnonymous,
+      evidencePaths,
+    });
 
-            status:
-              response.data.status,
-          },
-        });
-      } catch (error) {
-        console.error(
-          "Report submission error:",
-          error
-        );
+    if (!response?.data?.id) {
+      throw new Error(
+        "The report could not be confirmed. Please check your reports before trying again."
+      );
+    }
 
-        Alert.alert(
-          "Submission Failed",
-          error instanceof Error
-            ? error.message
-            : "Unable to submit your report."
-        );
-      } finally {
-        setSubmitting(false);
-      }
-    };
+    router.replace({
+      pathname: "/report/success",
+      params: {
+        id: response.data.id,
+        status: response.data.status,
+      },
+    });
+  } catch (error) {
+    console.error("Report submission error:", error);
+
+    Alert.alert(
+      "Submission Failed",
+      error instanceof Error
+        ? error.message
+        : "Unable to submit your report."
+    );
+  } finally {
+    submissionLock.current = false;
+    setSubmitting(false);
+  }
+};
 
   /* ==========================================================
      EDIT REPORT
