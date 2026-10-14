@@ -16,7 +16,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-
 export default function RootLayout() {
   return (
     <AuthProvider>

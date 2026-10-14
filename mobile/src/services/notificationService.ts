@@ -40,8 +40,3 @@ export async function registerPushTokenWithBackend(token: string) {
 }
 
 
-export async function sendTestNotification() {
-  return await apiRequest("/api/notifications/test", {
-    method: "POST",
-  });
-}

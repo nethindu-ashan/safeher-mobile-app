@@ -1,6 +1,7 @@
 import {
   getPushTokensByUserId,
 } from "../repositories/pushToken.repository.js";
+import { findUsersNearLocation } from "../repositories/user.repository.js";
 
 const EXPO_PUSH_URL =
   "https://exp.host/--/api/v2/push/send";
@@ -56,3 +57,34 @@ export async function sendNotificationToUser(
 
   return result.data ?? [];
 }
+
+export async function sendNearbyIncidentNotifications(incident) {
+  const users = await findUsersNearLocation(
+    incident.latitude,
+    incident.longitude,
+    5
+  );
+
+  for (const user of users) {
+    const nearbyAlertsEnabled =
+      user.notificationPreference?.nearbyAlerts ?? true;
+
+    if (!nearbyAlertsEnabled) {
+      continue;
+    }
+
+    if (user.pushTokens.length === 0) {
+      continue;
+    }
+
+    await sendNotificationToUser(user.id, {
+      title: "Nearby Safety Alert",
+      body: `A safety incident was reported near your location.`,
+      data: {
+        type: "NEARBY_ALERT",
+        incidentId: incident.id,
+      },
+    });
+  }
+}
+
