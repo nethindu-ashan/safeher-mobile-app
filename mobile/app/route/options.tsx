@@ -39,6 +39,9 @@ export default function RouteOptionsScreen() {
 
   const mapRef = useRef<MapView>(null);
 
+  const [selectedIncident, setSelectedIncident] =
+    useState<RouteSafetyIncident | null>(null);
+
   const [routeCoordinates, setRouteCoordinates] = useState< {
         latitude: number;
         longitude: number;
@@ -195,6 +198,7 @@ export default function RouteOptionsScreen() {
                   title={incident.category}
                   description={`${incident.distanceToRouteKm} km from route`}
                   pinColor={COLORS.error}
+                  onPress={() => setSelectedIncident(incident)}
                 />
               ))}
 
@@ -205,6 +209,39 @@ export default function RouteOptionsScreen() {
                 strokeColor={COLORS.primary}
               />
             </MapView>
+
+            {/* incident details popup */}
+            {selectedIncident && (
+              <View className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white p-4 shadow-lg">
+
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-lg font-bold text-app-text">
+                    ⚠️ {selectedIncident.category}
+                  </Text>
+
+                  <Text
+                    onPress={() => setSelectedIncident(null)}
+                    className="text-lg font-bold text-app-text-secondary"
+                  >
+                    ✕
+                  </Text>
+                </View>
+
+                <Text className="mt-2 text-sm text-app-text-secondary">
+                  {selectedIncident.distanceToRouteKm} km from route
+                </Text>
+
+                <Text className="mt-3 text-sm text-app-text">
+                  {selectedIncident.description}
+                </Text>
+
+                <Text className="mt-3 text-xs text-app-text-secondary">
+                  Status: {selectedIncident.status}
+                </Text>
+
+              </View>
+            )}
+
           </View>
 
           {/* Route information */}
